@@ -42,10 +42,7 @@ const useStyles = makeStyles((theme) => ({
   },
 
   messagesList: {
-    backgroundImage:
-      theme.palette.type === "dark" ? "none" : `url(${whatsBackground})`,
-    backgroundColor:
-      theme.palette.type === "dark" ? theme.palette.background.default : undefined,
+    backgroundImage: `url(${whatsBackground})`,
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,
@@ -82,8 +79,8 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: theme.palette.type === "dark" ? "rgba(255,255,255,0.06)" : "#ffffff",
-    color: theme.palette.text.primary,
+    backgroundColor: "#ffffff",
+    color: "#303030",
     alignSelf: "flex-start",
     borderTopLeftRadius: 0,
     borderTopRightRadius: 8,
@@ -93,15 +90,13 @@ const useStyles = makeStyles((theme) => ({
     paddingRight: 5,
     paddingTop: 5,
     paddingBottom: 0,
-    boxShadow:
-      theme.palette.type === "dark" ? "none" : "0 1px 1px rgba(0,0,0,0.18)",
+    boxShadow: "0 1px 1px #b3b3b3",
   },
 
   quotedContainerLeft: {
     margin: "-3px -80px 6px -6px",
     overflow: "hidden",
-    backgroundColor:
-      theme.palette.type === "dark" ? "rgba(255,255,255,0.05)" : "#f0f0f0",
+    backgroundColor: "#f0f0f0",
     borderRadius: "7.5px",
     display: "flex",
     position: "relative",
@@ -138,9 +133,8 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor:
-      theme.palette.type === "dark" ? "rgba(34,197,94,0.18)" : "#dcf8c6",
-    color: theme.palette.text.primary,
+    backgroundColor: "#dcf8c6",
+    color: "#303030",
     alignSelf: "flex-end",
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
@@ -150,15 +144,13 @@ const useStyles = makeStyles((theme) => ({
     paddingRight: 5,
     paddingTop: 5,
     paddingBottom: 0,
-    boxShadow:
-      theme.palette.type === "dark" ? "none" : "0 1px 1px rgba(0,0,0,0.18)",
+    boxShadow: "0 1px 1px #b3b3b3",
   },
 
   quotedContainerRight: {
     margin: "-3px -80px 6px -6px",
     overflowY: "hidden",
-    backgroundColor:
-      theme.palette.type === "dark" ? "rgba(34,197,94,0.10)" : "#cfe9ba",
+    backgroundColor: "#cfe9ba",
     borderRadius: "7.5px",
     display: "flex",
     position: "relative",
@@ -200,10 +192,7 @@ const useStyles = makeStyles((theme) => ({
 
   textContentItemDeleted: {
     fontStyle: "italic",
-    color:
-      theme.palette.type === "dark"
-        ? "rgba(255,255,255,0.45)"
-        : "rgba(0, 0, 0, 0.36)",
+    color: "rgba(0, 0, 0, 0.36)",
     overflowWrap: "break-word",
     padding: "3px 80px 6px 6px",
   },
@@ -223,7 +212,7 @@ const useStyles = makeStyles((theme) => ({
     position: "absolute",
     bottom: 0,
     right: 5,
-    color: theme.palette.text.secondary,
+    color: "#999",
   },
 
   dailyTimestamp: {
@@ -231,11 +220,10 @@ const useStyles = makeStyles((theme) => ({
     textAlign: "center",
     alignSelf: "center",
     width: "110px",
-    backgroundColor:
-      theme.palette.type === "dark" ? "rgba(255,255,255,0.08)" : "#e1f3fb",
+    backgroundColor: "#e1f3fb",
     margin: "10px",
     borderRadius: "10px",
-    boxShadow: theme.palette.type === "dark" ? "none" : "0 1px 1px #b3b3b3",
+    boxShadow: "0 1px 1px #b3b3b3",
   },
 
   dailyTimestampText: {

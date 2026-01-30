@@ -111,14 +111,12 @@ const TicketsManager = () => {
     }
   }, [tab]);
 
-  const searchTimeoutRef = useRef(null);
+  let searchTimeout;
 
   const handleSearch = (e) => {
     const searchedTerm = e.target.value.toLowerCase();
 
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
+    clearTimeout(searchTimeout);
 
     if (searchedTerm === "") {
       setSearchParam(searchedTerm);
@@ -126,18 +124,10 @@ const TicketsManager = () => {
       return;
     }
 
-    searchTimeoutRef.current = setTimeout(() => {
+    searchTimeout = setTimeout(() => {
       setSearchParam(searchedTerm);
     }, 500);
   };
-
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const handleChangeTab = (e, newValue) => {
     setTab(newValue);
