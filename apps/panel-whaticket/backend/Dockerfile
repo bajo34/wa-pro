@@ -44,4 +44,4 @@ RUN npm run build
 EXPOSE 3000
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD sh -lc "dockerize -wait ${DATABASE_URL} && npx sequelize db:migrate && node dist/server.js"
+CMD sh -lc "dockerize -wait tcp://${DB_HOST}:5432 && npx sequelize db:migrate && node dist/server.js"
