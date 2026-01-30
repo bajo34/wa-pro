@@ -12,11 +12,12 @@ RUN wget -q https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_V
   && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-${DOCKERIZE_VERSION}.tar.gz \
   && rm dockerize-linux-amd64-${DOCKERIZE_VERSION}.tar.gz
 
-# Google Chrome repo (nuevo método, sin apt-key)
+# Google Chrome repo (FIX: dearmor de la key)
 RUN mkdir -p /etc/apt/keyrings \
-  && wget -qO /etc/apt/keyrings/google-linux-signing-key.gpg https://dl.google.com/linux/linux_signing_key.pub \
+  && wget -qO- https://dl.google.com/linux/linux_signing_key.pub \
+     | gpg --dearmor -o /etc/apt/keyrings/google-linux-signing-key.gpg \
   && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-linux-signing-key.gpg] https://dl.google.com/linux/chrome/deb/ stable main" \
-    > /etc/apt/sources.list.d/google-chrome.list \
+     > /etc/apt/sources.list.d/google-chrome.list \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
     google-chrome-stable \
