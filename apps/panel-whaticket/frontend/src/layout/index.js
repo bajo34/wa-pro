@@ -52,7 +52,12 @@ const useStyles = makeStyles((theme) => ({
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
-    backgroundColor: theme.palette.background.default,
+    backgroundColor: theme.palette.background.paper,
+    boxShadow: "none",
+    borderBottom:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255,255,255,0.08)"
+        : "1px solid rgba(17,24,39,0.08)",
   },
   appBarShift: {
     marginLeft: drawerWidth,
@@ -82,6 +87,10 @@ const useStyles = makeStyles((theme) => ({
       duration: theme.transitions.duration.enteringScreen,
     }),
     backgroundColor: theme.palette.background.paper,
+    borderRight:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255,255,255,0.08)"
+        : "1px solid rgba(17,24,39,0.08)",
   },
   drawerPaperClose: {
     overflowX: "hidden",
@@ -100,6 +109,7 @@ const useStyles = makeStyles((theme) => ({
   content: {
     flex: 1,
     overflow: "auto",
+    backgroundColor: theme.palette.background.default,
   },
   container: {
     paddingTop: theme.spacing(4),

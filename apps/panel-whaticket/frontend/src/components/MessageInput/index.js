@@ -53,11 +53,14 @@ const initRecorder = async () => {
 
 const useStyles = makeStyles(theme => ({
   mainWrapper: {
-    background: "#eee",
+    background: theme.palette.background.paper,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    borderTop:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255,255,255,0.08)"
+        : "1px solid rgba(0, 0, 0, 0.12)",
     [theme.breakpoints.down("sm")]: {
       position: "fixed",
       bottom: 0,
@@ -66,7 +69,7 @@ const useStyles = makeStyles(theme => ({
   },
 
   newMessageBox: {
-    background: "#eee",
+    background: theme.palette.background.paper,
     width: "100%",
     display: "flex",
     padding: "7px",
@@ -76,7 +79,7 @@ const useStyles = makeStyles(theme => ({
   messageInputWrapper: {
     padding: 6,
     marginRight: 7,
-    background: "#fff",
+    background: theme.palette.type === "dark" ? "rgba(255,255,255,0.06)" : "#fff",
     display: "flex",
     borderRadius: 20,
     flex: 1,
@@ -87,6 +90,7 @@ const useStyles = makeStyles(theme => ({
     paddingLeft: 10,
     flex: 1,
     border: "none",
+    color: theme.palette.text.primary,
   },
 
   sendMessageIcons: {
@@ -103,15 +107,18 @@ const useStyles = makeStyles(theme => ({
     position: "relative",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#eee",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    backgroundColor: theme.palette.background.paper,
+    borderTop:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255,255,255,0.08)"
+        : "1px solid rgba(0, 0, 0, 0.12)",
   },
 
   emojiBox: {
     position: "absolute",
     bottom: 63,
     width: 40,
-    borderTop: "1px solid #e8e8e8",
+    borderTop: theme.palette.type === "dark" ? "1px solid rgba(255,255,255,0.08)" : "1px solid #e8e8e8",
   },
 
   circleLoading: {
@@ -156,7 +163,7 @@ const useStyles = makeStyles(theme => ({
     flex: 1,
     marginRight: 5,
     overflowY: "hidden",
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    backgroundColor: theme.palette.type === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0, 0, 0, 0.05)",
     borderRadius: "7.5px",
     display: "flex",
     position: "relative",
@@ -191,9 +198,9 @@ const useStyles = makeStyles(theme => ({
     margin: 0,
     position: "absolute",
     bottom: "50px",
-    background: "#ffffff",
+    background: theme.palette.background.paper,
     padding: "2px",
-    border: "1px solid #CCC",
+    border: theme.palette.type === "dark" ? "1px solid rgba(255,255,255,0.12)" : "1px solid #CCC",
     left: 0,
     width: "100%",
     "& li": {
@@ -205,7 +212,7 @@ const useStyles = makeStyles(theme => ({
         overflow: "hidden",
         maxHeight: "32px",
         "&:hover": {
-          background: "#F1F1F1",
+          background: theme.palette.type === "dark" ? "rgba(255,255,255,0.08)" : "#F1F1F1",
           cursor: "pointer",
         },
       },
@@ -231,6 +238,8 @@ const MessageInput = ({ ticketStatus }) => {
   const { user } = useContext(AuthContext);
 
   const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
+
+  const quickAnswerTimeoutRef = useRef(null);
 
   useEffect(() => {
     inputRef.current.focus();
@@ -339,25 +348,46 @@ const MessageInput = ({ ticketStatus }) => {
     }
   };
 
-  const handleLoadQuickAnswer = async value => {
-    if (value && value.indexOf("/") === 0) {
+  const handleLoadQuickAnswer = value => {
+    // Debounced server search for /shortcut
+    if (quickAnswerTimeoutRef.current) {
+      clearTimeout(quickAnswerTimeoutRef.current);
+    }
+
+    if (!value || value.indexOf("/") !== 0) {
+      setTypeBar(false);
+      setQuickAnswer([]);
+      return;
+    }
+
+    const term = value.substring(1).trim();
+    if (!term) {
+      setTypeBar(false);
+      setQuickAnswer([]);
+      return;
+    }
+
+    quickAnswerTimeoutRef.current = setTimeout(async () => {
       try {
         const { data } = await api.get("/quickAnswers/", {
-          params: { searchParam: inputMessage.substring(1) },
+          params: { searchParam: term },
         });
-        setQuickAnswer(data.quickAnswers);
-        if (data.quickAnswers.length > 0) {
-          setTypeBar(true);
-        } else {
-          setTypeBar(false);
-        }
+        const list = data?.quickAnswers || [];
+        setQuickAnswer(list);
+        setTypeBar(list.length > 0);
       } catch (err) {
         setTypeBar(false);
       }
-    } else {
-      setTypeBar(false);
-    }
+    }, 250);
   };
+
+  useEffect(() => {
+    return () => {
+      if (quickAnswerTimeoutRef.current) {
+        clearTimeout(quickAnswerTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleUploadAudio = async () => {
     setLoading(true);
