@@ -1,10 +1,13 @@
 import { Request, Response } from "express";
+import fs from "fs";
+import path from "path";
 
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTicketService";
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
 import Whatsapp from "../models/Whatsapp";
 import { logger } from "../utils/logger";
+import uploadConfig from "../config/upload";
 
 function getText(msg: any): string {
   const m = msg?.message || {};
@@ -39,6 +42,63 @@ function isMessagesUpsertEvent(body: any): boolean {
     ev === "messagesupsert" ||
     evRaw === "MESSAGES_UPSERT"
   );
+}
+
+function parseCsvSet(v: string | undefined): Set<string> {
+  return new Set(
+    String(v || "")
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean)
+  );
+}
+
+function isAllowedNumber(number: string): boolean {
+  const allow = parseCsvSet(process.env.WHATSAPP_ALLOWLIST);
+  const block = parseCsvSet(process.env.WHATSAPP_BLOCKLIST);
+
+  if (block.size && block.has(number)) return false;
+  if (allow.size) return allow.has(number);
+  return true;
+}
+
+function guessExt(mediaType?: string): string {
+  switch (mediaType) {
+    case "image":
+      return "jpg";
+    case "video":
+      return "mp4";
+    case "audio":
+      return "ogg";
+    case "document":
+      return "bin";
+    default:
+      return "bin";
+  }
+}
+
+function tryPersistBase64Media(msgId: string, mediaType: string | undefined, base64: string): string | null {
+  if (!base64 || typeof base64 !== "string") return null;
+
+  // ~20MB raw cap (base64 expands ~33%)
+  const maxBase64Chars = 28_000_000;
+  if (base64.length > maxBase64Chars) return null;
+
+  try {
+    const buf = Buffer.from(base64, "base64");
+    if (buf.length > 20 * 1024 * 1024) return null;
+
+    const ext = guessExt(mediaType);
+    const filename = `ev_${Date.now()}_${msgId}.${ext}`;
+    const out = path.join(uploadConfig.directory, filename);
+
+    fs.mkdirSync(uploadConfig.directory, { recursive: true });
+    fs.writeFileSync(out, buf);
+
+    return filename;
+  } catch {
+    return null;
+  }
 }
 
 export const evolutionWebhook = async (req: Request, res: Response): Promise<Response> => {
@@ -80,23 +140,38 @@ export const evolutionWebhook = async (req: Request, res: Response): Promise<Res
     }
 
     const number = remoteJid.split("@")[0];
+
+    if (!isAllowedNumber(number)) {
+      return res.status(200).json({ ok: true, ignored: true, reason: "not_allowed" });
+    }
+
     const text = getText(msg);
     const mediaType = getMediaType(msg);
+    const pushName = String(msg?.pushName || "").trim();
+
+    // Evolution may attach a public mediaUrl (S3/MinIO) OR base64 in webhook.
+    const evoMediaUrl = msg?.message?.mediaUrl;
+    const evoBase64 = msg?.message?.base64;
+
+    let mediaUrl: string | undefined;
+
+    if (typeof evoMediaUrl === "string" && /^https?:\/\//i.test(evoMediaUrl)) {
+      mediaUrl = evoMediaUrl;
+    } else if (typeof evoBase64 === "string" && mediaType) {
+      const persisted = tryPersistBase64Media(msgId, mediaType, evoBase64);
+      if (persisted) mediaUrl = persisted;
+    }
+
     const bodyText = text || (mediaType ? `[${mediaType}]` : "");
 
-    // Contact
     const contact = await CreateOrUpdateContactService({
-      name: number,
+      name: pushName || number,
       number,
       profilePicUrl: "",
       isGroup: false
     });
 
-    const ticket = await FindOrCreateTicketService(
-      contact,
-      whatsapp.id,
-      fromMe ? 0 : 1
-    );
+    const ticket = await FindOrCreateTicketService(contact, whatsapp.id, fromMe ? 0 : 1);
 
     await ticket.update({ lastMessage: bodyText });
 
@@ -108,7 +183,8 @@ export const evolutionWebhook = async (req: Request, res: Response): Promise<Res
         body: bodyText,
         fromMe,
         read: fromMe,
-        mediaType
+        mediaType,
+        mediaUrl
       }
     } as any);
 

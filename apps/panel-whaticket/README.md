@@ -7,6 +7,26 @@
 
 # WhaTicket!
 
+## WhatsApp-only PRO (Evolution API)
+
+Este zip está preparado para **WhatsApp vía Evolution API** (QR + estado dentro del panel).
+- Backend: Whaticket + provider EVOLUTION
+- DB: Postgres recomendado
+- Webhook: Evolution -> `GET/POST /webhooks/evolution/:instanceName` con secret
+
+### Variables mínimas (Railway)
+- `BACKEND_URL`, `FRONTEND_URL`
+- `DB_DIALECT=postgres`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`
+- `WHATSAPP_PROVIDER=EVOLUTION`
+- `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_WEBHOOK_SECRET`
+
+### Media entrante
+- Si Evolution adjunta `message.mediaUrl` (S3/MinIO), se muestra directo.
+- Si no, activá `EVOLUTION_WEBHOOK_BASE64=true` y el backend decodifica el base64 y lo guarda en `/public`.
+
+---
+
+
 **NOTE**: The new version of whatsapp-web.js required Node 14. Upgrade your installations to keep using it.
 
 A _very simple_ Ticket System based on WhatsApp messages.

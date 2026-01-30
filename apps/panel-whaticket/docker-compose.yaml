@@ -1,62 +1,72 @@
-version: '3'
+version: "3.8"
 
 networks:
   whaticket:
 
 services:
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=${DB_NAME:-whaticket}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASS:-postgres}
+      - TZ=${TZ:-America/Argentina/Buenos_Aires}
+    ports:
+      - ${DB_PORT_HOST:-5432}:5432
+    volumes:
+      - ./.docker/pgdata:/var/lib/postgresql/data
+    networks:
+      - whaticket
 
   backend:
     build:
       context: ./backend
       dockerfile: ./Dockerfile
     environment:
-      - DB_HOST=mysql
-      - DB_USER=root
-      - DB_PASS=${MYSQL_ROOT_PASSWORD:-strongpassword}
-      - DB_NAME=${MYSQL_DATABASE:-whaticket}
-      - JWT_SECRET=${JWT_SECRET:-3123123213123}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-75756756756}
-      - BACKEND_URL=${BACKEND_URL:-http://localhost}
+      - PORT=3000
+      - NODE_ENV=development
+      - DB_DIALECT=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASS=${DB_PASS:-postgres}
+      - DB_NAME=${DB_NAME:-whaticket}
+      - TZ=${TZ:-America/Argentina/Buenos_Aires}
+      - JWT_SECRET=${JWT_SECRET:-change_me}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-change_me_too}
+      - BACKEND_URL=${BACKEND_URL:-http://localhost:8080}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - PROXY_PORT=${PROXY_PORT:-8080}
-      - CHROME_ARGS=--no-sandbox --disable-setuid-sandbox
+      - WHATSAPP_PROVIDER=EVOLUTION
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - EVOLUTION_INSTANCE=${EVOLUTION_INSTANCE}
+      - EVOLUTION_WEBHOOK_SECRET=${EVOLUTION_WEBHOOK_SECRET:-change_me_long_random}
+      - EVOLUTION_WEBHOOK_BASE64=${EVOLUTION_WEBHOOK_BASE64:-true}
+      - EVOLUTION_POLL_MS=${EVOLUTION_POLL_MS:-3000}
+      - WHATSAPP_ALLOWLIST=${WHATSAPP_ALLOWLIST}
+      - WHATSAPP_BLOCKLIST=${WHATSAPP_BLOCKLIST}
     ports:
       - ${BACKEND_PORT:-8080}:3000
     volumes:
       - ./backend/public/:/usr/src/app/public/
-      - ./backend/.wwebjs_auth/:/usr/src/app/.wwebjs_auth/
+    depends_on:
+      - postgres
     networks:
       - whaticket
 
   frontend:
-    ports:
-      - ${FRONTEND_PORT:-3000}:80
-      - ${FRONTEND_SSL_PORT:-3001}:443
     build:
       context: ./frontend
       dockerfile: ./Dockerfile
     environment:
       - URL_BACKEND=backend:3000
-      - REACT_APP_BACKEND_URL=${BACKEND_URL:-http://localhost}:${PROXY_PORT:-8080}/
-      - FRONTEND_SERVER_NAME=${FRONTEND_SERVER_NAME}
-      - BACKEND_SERVER_NAME=${BACKEND_SERVER_NAME}
-    volumes:
-      - ./ssl/certs/:/etc/nginx/ssl/
-      - ./ssl/www/:/var/www/letsencrypt/
-    networks:
-      - whaticket
-
-  mysql:
-    image: ${MYSQL_ENGINE:-mariadb}:${MYSQL_VERSION:-10.6}
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_bin    
-    volumes:
-      - ./.docker/data/:/var/lib/mysql
-    environment:
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-whaticket}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-strongpassword}
-      - TZ=${TZ:-America/Fortaleza}
+      - REACT_APP_BACKEND_URL=${BACKEND_URL:-http://localhost:8080}/
+      - FRONTEND_SERVER_NAME=${FRONTEND_SERVER_NAME:-localhost}
+      - BACKEND_SERVER_NAME=${BACKEND_SERVER_NAME:-localhost}
     ports:
-      - ${MYSQL_PORT:-3306}:3306
-    restart: always
+      - ${FRONTEND_PORT:-3000}:80
     networks:
       - whaticket
+    depends_on:
+      - backend

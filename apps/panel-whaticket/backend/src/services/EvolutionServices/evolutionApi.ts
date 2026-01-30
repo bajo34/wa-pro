@@ -91,7 +91,7 @@ export async function evolutionCreateInstance(params: {
         "x-evolution-secret": params.webhookSecret
       },
       byEvents: false,
-      base64: false
+      base64: String(process.env.EVOLUTION_WEBHOOK_BASE64 || "").toLowerCase() === "true"
     }
   };
 

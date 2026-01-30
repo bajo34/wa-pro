@@ -15,6 +15,15 @@ import evolutionWebhookRoutes from "./evolutionWebhookRoutes";
 
 const routes = Router();
 
+routes.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    provider: String(process.env.WHATSAPP_PROVIDER || "").toUpperCase() || "WWEBJS",
+    evolutionConfigured: !!process.env.EVOLUTION_API_URL,
+    time: new Date().toISOString()
+  });
+});
+
 // Webhooks (no auth)
 routes.use("/webhooks", evolutionWebhookRoutes);
 
