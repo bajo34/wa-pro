@@ -1,0 +1,29 @@
+import pg from 'pg';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { env } from '../lib/env.js';
+
+const { Pool } = pg;
+
+export const pool = new Pool({
+  connectionString: env.databaseUrl,
+  max: 5,
+  idleTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 10_000
+});
+
+export async function migrate() {
+  const sqlPath = path.join(process.cwd(), 'sql', '001_init.sql');
+  const sql = await fs.readFile(sqlPath, 'utf8');
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    await client.query(sql);
+    await client.query('commit');
+  } catch (e) {
+    await client.query('rollback');
+    throw e;
+  } finally {
+    client.release();
+  }
+}

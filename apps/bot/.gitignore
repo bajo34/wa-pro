@@ -1,0 +1,105 @@
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Env / Secrets
+# =========================
+.env
+.env.*
+!.env.example
+!.env.template
+*.local
+
+# =========================
+# Node / Package managers
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+.pnp.*
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# =========================
+# Build outputs
+# =========================
+dist/
+build/
+out/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# =========================
+# Next.js
+# =========================
+.next/
+.vercel/
+
+# =========================
+# Vite / React
+# =========================
+.vite/
+vite.config.*.timestamp-*
+
+# =========================
+# Turbo / Nx / Monorepo tools
+# =========================
+.turbo/
+.nx/
+.cache/
+
+# =========================
+# Prisma
+# =========================
+prisma/migrations/**/migration_lock.toml
+# (si generás cliente en carpeta local; normalmente va a node_modules)
+# prisma/generated/
+
+# =========================
+# Logs / Runtime
+# =========================
+logs/
+*.log
+
+# =========================
+# Testing / Playwright
+# =========================
+playwright-report/
+test-results/
+.trace/
+*.spec.ts.snap
+
+# =========================
+# Misc
+# =========================
+*.pem
+*.key
+*.crt
+
+# Railway (si tenés config local)
+.railway/
+
+# Optional: keep only example dumps
+*.sqlitecls
+*.db
+*.dump

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WA Evolution Panel</title>
+    <style>
+      /*
+        Global styling and layout. This panel is intentionally simple and
+        self‑contained – there are no external dependencies or build tools
+        required. It aims to provide a clean, modern UI that can serve as a
+        foundation for a more comprehensive application. Feel free to adjust
+        colors, spacing and typography to match your brand identity.
+      */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Helvetica, Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f4f6f8;
+        color: #333;
+      }
+      h1 {
+        margin: 0;
+        padding: 1rem;
+        background: #004a77;
+        color: #fff;
+        font-size: 1.5rem;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        background: #006faa;
+        padding: 0.5rem;
+      }
+      nav button {
+        background: transparent;
+        border: none;
+        color: #fff;
+        margin-right: 0.5rem;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        font-size: 0.9rem;
+        border-radius: 4px;
+      }
+      nav button.active,
+      nav button:hover {
+        background: #005f93;
+      }
+      #config {
+        padding: 1rem;
+        background: #fff;
+        border-bottom: 1px solid #ddd;
+      }
+      #config label {
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+      #config input[type='text'] {
+        width: 100%;
+        max-width: 400px;
+        padding: 0.4rem;
+        margin-bottom: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      #config button {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 4px;
+        background: #006faa;
+        color: #fff;
+        cursor: pointer;
+      }
+      #config button:hover {
+        background: #005f93;
+      }
+      .section {
+        padding: 1rem;
+        display: none;
+      }
+      .cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .card {
+        background: #fff;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        flex: 1 1 150px;
+      }
+      .card h3 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+        color: #006faa;
+      }
+      .card p {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: bold;
+      }
+      #inboxSection .conversation {
+        background: #fff;
+        padding: 0.75rem;
+        border-bottom: 1px solid #e0e0e0;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      #inboxSection .conversation:hover {
+        background: #f0f4f7;
+      }
+      #messages {
+        max-height: 400px;
+        overflow-y: auto;
+        margin-bottom: 1rem;
+        padding-right: 0.5rem;
+      }
+      .message {
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 4px;
+        max-width: 600px;
+      }
+      .message.agent {
+        background: #d1e7ff;
+        margin-left: auto;
+        text-align: right;
+      }
+      .message.bot {
+        background: #ffe8cc;
+      }
+      .message.customer {
+        background: #e2f0d9;
+      }
+      #replyForm textarea {
+        width: 100%;
+        max-width: 600px;
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        resize: vertical;
+      }
+      #replyForm input[type='text'] {
+        width: 100%;
+        max-width: 600px;
+        padding: 0.4rem;
+        margin-bottom: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      #replyForm button {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 4px;
+        background: #006faa;
+        color: #fff;
+        cursor: pointer;
+      }
+      #replyForm button:hover {
+        background: #005f93;
+      }
+      /* Simple table for listing entities */
+      table.entity-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+      }
+      table.entity-table th,
+      table.entity-table td {
+        padding: 0.5rem;
+        border-bottom: 1px solid #e0e0e0;
+        text-align: left;
+      }
+      table.entity-table th {
+        background: #f0f4f7;
+      }
+      .actions button {
+        margin-right: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+        border: none;
+        border-radius: 4px;
+        background: #006faa;
+        color: #fff;
+        cursor: pointer;
+      }
+      .actions button.delete {
+        background: #c82333;
+      }
+      .actions button.update {
+        background: #17a2b8;
+      }
+      .actions button:hover {
+        opacity: 0.8;
+      }
+      /* Style update and delete buttons outside of entity tables. These classes
+         can be applied to standalone buttons, such as conversation assignment
+         controls. */
+      button.update {
+        background: #17a2b8;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 0.4rem 0.8rem;
+        cursor: pointer;
+      }
+      button.delete {
+        background: #c82333;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 0.4rem 0.8rem;
+        cursor: pointer;
+      }
+      button.update:hover,
+      button.delete:hover {
+        opacity: 0.85;
+      }
+
+      /* Layout for the conversation view. Splits the container into a main
+         message column and a contact details column. */
+      #conversationContainer {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 1rem;
+      }
+      #conversationMain {
+        flex: 2;
+      }
+      #contactDetails {
+        flex: 1;
+        background: #fff;
+        padding: 0.75rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      #contactDetails textarea {
+        width: 100%;
+        padding: 0.4rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        resize: vertical;
+        box-sizing: border-box;
+      }
+      /* Quick replies panel within conversation */
+      #quickReplyPanel {
+        margin-bottom: 1rem;
+        background: #fff;
+        padding: 0.5rem;
+        border-radius: 4px;
+        max-width: 600px;
+      }
+      #quickReplyPanel ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      #quickReplyPanel li button {
+        padding: 0.4rem 0.8rem;
+        border: none;
+        border-radius: 4px;
+        background: #e0e0e0;
+        cursor: pointer;
+      }
+      #quickReplyPanel li button:hover {
+        background: #d1d1d1;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WA Evolution Panel</h1>
+    <!-- Configuration for token and tenant. Visible at the top to allow quick updates during testing. -->
+    <div id="config">
+      <label>
+        Panel Token:
+        <input id="token" type="text" value="Bajo112122*" />
+      </label>
+      <label>
+        Tenant ID:
+        <input id="tenant" type="text" value="11b69e24-513a-4b18-86d3-d50a0eaf638b" />
+      </label>
+      <button id="saveConfig">Save Config</button>
+    </div>
+    <!-- Primary navigation. Each button toggles a corresponding section below. -->
+    <nav id="nav">
+      <button data-section="dashboardSection" class="active">Dashboard</button>
+      <button data-section="inboxSection">Inbox</button>
+      <button data-section="quickRepliesSection">Quick Replies</button>
+      <button data-section="rulesSection">Rules</button>
+      <button data-section="usersSection">Users</button>
+    </nav>
+    <!-- Dashboard / Metrics -->
+    <section id="dashboardSection" class="section" style="display: block;">
+      <h2>Dashboard</h2>
+      <div id="metricsContainer" class="cards">
+        <div class="card">
+          <h3>Open Conversations</h3>
+          <p id="metricOpen">0</p>
+        </div>
+        <div class="card">
+          <h3>Closed Conversations</h3>
+          <p id="metricClosed">0</p>
+        </div>
+        <div class="card">
+          <h3>Total Messages</h3>
+          <p id="metricTotalMsgs">0</p>
+        </div>
+        <div class="card">
+          <h3>Messages (24h)</h3>
+          <p id="metricMsgs24h">0</p>
+        </div>
+      </div>
+    </section>
+    <!-- Inbox -->
+    <section id="inboxSection" class="section">
+      <h2>Inbox</h2>
+      <button id="refreshInbox">Refresh Inbox</button>
+      <!-- Search input to filter conversations by JID -->
+      <label style="margin-left: 1rem;">
+        Search:
+        <input type="text" id="searchInbox" placeholder="Search conversations" />
+      </label>
+      <div id="inbox"></div>
+      <!-- Conversation details -->
+      <div id="conversationContainer" style="display: none;">
+        <!-- Left side: conversation messages and reply -->
+        <div id="conversationMain">
+          <h3>Conversation</h3>
+          <!-- Quick reply suggestions for this conversation -->
+          <div id="quickReplyPanel" style="display: none;">
+            <h4>Quick Replies</h4>
+            <ul id="quickReplyList"></ul>
+          </div>
+          <!-- Messages container -->
+          <div id="messages"></div>
+          <!-- Reply form -->
+          <form id="replyForm">
+            <textarea id="replyText" rows="3" placeholder="Write a message..." required></textarea><br />
+            <input type="text" id="replyImage" placeholder="Image URL (optional)" /><br />
+            <button type="submit">Send</button>
+          </form>
+          <!-- Assignment controls -->
+          <div style="margin: 0.5rem 0;">
+            <label>
+              Assign to:
+              <select id="assignUserSelect"></select>
+            </label>
+            <button id="assignBtn" class="update">Assign</button>
+            <button id="unassignBtn" class="delete">Unassign</button>
+          </div>
+          <button id="backButton">Back to Inbox</button>
+        </div>
+        <!-- Right side: contact details and notes. Hidden until conversation is loaded. -->
+        <div id="contactDetails" style="display: none;">
+          <h3>Contact</h3>
+          <p><strong>JID:</strong> <span id="contactJid"></span></p>
+          <label for="contactNotes"><strong>Notes:</strong></label><br />
+          <textarea id="contactNotes" placeholder="Add notes..." rows="4"></textarea><br />
+          <button id="saveNotesBtn" class="update">Save Notes</button>
+        </div>
+      </div>
+    </section>
+    <!-- Quick Replies management -->
+    <section id="quickRepliesSection" class="section">
+      <h2>Quick Replies</h2>
+      <form id="quickReplyForm">
+        <input type="text" id="quickReplyLabel" placeholder="Label" required />
+        <br />
+        <textarea id="quickReplyText" rows="2" placeholder="Response text" required></textarea>
+        <br />
+        <button type="submit">Create</button>
+      </form>
+      <table class="entity-table" id="quickRepliesTable">
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Text</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="quickRepliesList"></tbody>
+      </table>
+    </section>
+    <!-- Rules management -->
+    <section id="rulesSection" class="section">
+      <h2>Rules</h2>
+      <form id="ruleForm">
+        <input type="text" id="ruleKeywords" placeholder="Trigger keywords (comma-separated)" required />
+        <br />
+        <input type="text" id="ruleAction" placeholder="Action" required />
+        <br />
+        <button type="submit">Create Rule</button>
+      </form>
+      <table class="entity-table" id="rulesTable">
+        <thead>
+          <tr>
+            <th>Keywords</th>
+            <th>Action</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rulesList"></tbody>
+      </table>
+    </section>
+    <!-- Users management -->
+    <section id="usersSection" class="section">
+      <h2>Users</h2>
+      <form id="userForm">
+        <input type="text" id="userUsername" placeholder="Username" required />
+        <br />
+        <input type="text" id="userPasswordHash" placeholder="Password Hash" required />
+        <br />
+        <select id="userRole">
+          <option value="agent">Agent</option>
+          <option value="admin">Admin</option>
+          <option value="supervisor">Supervisor</option>
+          <option value="viewer">Viewer</option>
+        </select>
+        <br />
+        <button type="submit">Create User</button>
+      </form>
+      <table class="entity-table" id="usersTable">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Created</th>
+            <th>Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersList"></tbody>
+      </table>
+    </section>
+    <script src="app.js"></script>
+  </body>
+</html>
