@@ -37,21 +37,60 @@ export type EvolutionQrCode = {
 
 export function evolutionExtractQrCode(payload: any): string {
   // Evolution may return a QrCode object directly, or wrapped.
-  const qr: EvolutionQrCode | undefined =
-    payload?.qrcode || payload?.qrCode || payload?.instance?.qrcode || payload;
+  const qr: any = payload?.qrcode || payload?.qrCode || payload?.instance?.qrcode || payload;
 
-  // Whaticket frontend expects the *QR string* (not base64 image).
-  const code = (qr as any)?.code;
-  if (typeof code === "string" && code.length > 0) return code;
+  // Prefer the raw QR string (some builds expose it as `code` or `qr`).
+  const code = qr?.code ?? qr?.qr ?? qr?.text;
+  if (typeof code === "string" && code.trim().length > 0) return code.trim();
 
-  // Fallback: sometimes pairingCode is present
-  const pairing = (qr as any)?.pairingCode;
-  if (typeof pairing === "string" && pairing.length > 0) return pairing;
+  // Some builds expose a pairing code.
+  const pairing = qr?.pairingCode;
+  if (typeof pairing === "string" && pairing.trim().length > 0) return pairing.trim();
+
+  // Many builds return the QR image as base64. We pass it through so the frontend can render it.
+  const base64 = qr?.base64 ?? payload?.base64;
+  if (typeof base64 === "string" && base64.trim().length > 0) {
+    const b = base64.trim();
+    return b.startsWith("data:image") ? b : `data:image/png;base64,${b}`;
+  }
 
   // Last resort: if it's already a string
   if (typeof qr === "string") return qr;
 
   return "";
+}
+
+export async function evolutionSetWebhook(params: {
+  instanceName: string;
+  webhookUrl: string;
+  webhookSecret: string;
+}): Promise<any> {
+  assertConfigured();
+  // Evolution v2 exposes a webhook set endpoint; we keep this tolerant to different minor versions.
+  const base = EVOLUTION_API_URL.replace(/\/$/, "");
+  const url = `${base}/webhook/set/${encodeURIComponent(params.instanceName)}`;
+  const body = {
+    enabled: true,
+    url: params.webhookUrl,
+    webhook_by_events: false,
+    webhook_base64: String(process.env.EVOLUTION_WEBHOOK_BASE64 || "").toLowerCase() === "true",
+    events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT"],
+    headers: {
+      "x-evolution-secret": params.webhookSecret
+    }
+  };
+
+  const { r, data } = await fetchJson(url, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(body)
+  });
+
+  if (!r.ok) {
+    // Some Evolution builds may not support this route; don't hard-fail the whole flow.
+    logger.warn({ status: r.status, data }, "Evolution setWebhook failed");
+  }
+  return data;
 }
 
 export async function evolutionConnectionState(instanceName: string): Promise<string> {
@@ -86,7 +125,8 @@ export async function evolutionCreateInstance(params: {
     webhook: {
       enabled: true,
       url: params.webhookUrl,
-      events: ["MESSAGES_UPSERT"],
+      // Include QR + connection events so the panel can update instantly.
+      events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT"],
       headers: {
         "x-evolution-secret": params.webhookSecret
       },
