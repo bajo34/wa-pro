@@ -30,7 +30,7 @@ ADD https://github.com/Yelp/dumb-init/releases/download/v1.2.1/dumb-init_1.2.1_a
 RUN chmod +x /usr/local/bin/dumb-init
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 ENV PORT=3000
 ENV CHROME_BIN=google-chrome-stable
 
@@ -40,10 +40,15 @@ COPY package*.json ./
 # Install all deps for build (TypeScript lives in devDeps), then prune.
 # We intentionally avoid npm ci here because this repo does not ship a package-lock.json
 # and Railway Docker builds would fail with `npm ci`.
-RUN npm install
+RUN npm install --include=dev
 
 COPY . .
-RUN npm run build && npm prune --omit=dev
+RUN npm run build \
+  && npm prune --omit=dev \
+  && npm cache clean --force
+
+# Runtime environment
+ENV NODE_ENV=production
 
 EXPOSE 3000
 

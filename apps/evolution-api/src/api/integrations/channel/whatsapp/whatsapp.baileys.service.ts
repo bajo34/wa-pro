@@ -1365,7 +1365,9 @@ export class BaileysStartupService extends ChannelStartupService {
               const jid = received.key.remoteJid;
               if (jid && jid !== 'status@broadcast') {
                 await this.prismaRepository.chat.upsert({
-                  where: { remoteJid_instanceId: { remoteJid: jid, instanceId: this.instanceId } },
+                  // Chat model compound unique is @@unique([instanceId, remoteJid])
+                  // so Prisma exposes it as instanceId_remoteJid (field order matters).
+                  where: { instanceId_remoteJid: { instanceId: this.instanceId, remoteJid: jid } },
                   create: { remoteJid: jid, instanceId: this.instanceId },
                   update: { unreadMessages: { increment: 0 } },
                 });
