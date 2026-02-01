@@ -16,6 +16,10 @@ Sentry.init({ dsn: process.env.SENTRY_DSN });
 
 const app = express();
 
+// Needed when running behind proxies (Railway, Nginx, etc.) so secure cookies
+// and other proxy-aware features behave correctly.
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     credentials: true,

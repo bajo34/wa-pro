@@ -66,17 +66,6 @@ const useStyles = makeStyles(theme => ({
 	buttonProgress: {
 		color: green[500],
 	},
-	emptyState: {
-		padding: theme.spacing(3),
-		textAlign: "center",
-	},
-	emptySteps: {
-		margin: `${theme.spacing(2)}px auto 0`,
-		maxWidth: 560,
-		textAlign: "left",
-		color: theme.palette.text.secondary,
-		lineHeight: 1.6,
-	},
 }));
 
 const CustomToolTip = ({ title, content, children }) => {
@@ -110,7 +99,6 @@ const Connections = () => {
 	const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
 	const [qrModalOpen, setQrModalOpen] = useState(false);
 	const [selectedWhatsApp, setSelectedWhatsApp] = useState(null);
-	const [isCreatingConnection, setIsCreatingConnection] = useState(false);
 	const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 	const confirmationModalInitialState = {
 		action: "",
@@ -140,27 +128,16 @@ const Connections = () => {
 	};
 
 	const handleOpenWhatsAppModal = () => {
-		setIsCreatingConnection(true);
 		setSelectedWhatsApp(null);
 		setWhatsAppModalOpen(true);
 	};
 
 	const handleCloseWhatsAppModal = useCallback(() => {
 		setWhatsAppModalOpen(false);
-	}, [setWhatsAppModalOpen]);
-
-	const handleWhatsAppSaved = useCallback(
-		whatsApp => {
-			if (!isCreatingConnection) return;
-			setSelectedWhatsApp(whatsApp);
-			setQrModalOpen(true);
-			setIsCreatingConnection(false);
-		},
-		[isCreatingConnection, setSelectedWhatsApp, setQrModalOpen, setIsCreatingConnection]
-	);
+		setSelectedWhatsApp(null);
+	}, [setSelectedWhatsApp, setWhatsAppModalOpen]);
 
 	const handleOpenQrModal = whatsApp => {
-		setIsCreatingConnection(false);
 		setSelectedWhatsApp(whatsApp);
 		setQrModalOpen(true);
 	};
@@ -171,7 +148,6 @@ const Connections = () => {
 	}, [setQrModalOpen, setSelectedWhatsApp]);
 
 	const handleEditWhatsApp = whatsApp => {
-		setIsCreatingConnection(false);
 		setSelectedWhatsApp(whatsApp);
 		setWhatsAppModalOpen(true);
 	};
@@ -332,7 +308,6 @@ const Connections = () => {
 				open={whatsAppModalOpen}
 				onClose={handleCloseWhatsAppModal}
 				whatsAppId={!qrModalOpen && selectedWhatsApp?.id}
-				onSaved={handleWhatsAppSaved}
 			/>
 			<MainHeader>
 				<Title>{i18n.t("connections.title")}</Title>
@@ -347,36 +322,6 @@ const Connections = () => {
 				</MainHeaderButtonsWrapper>
 			</MainHeader>
 			<Paper className={classes.mainPaper} variant="outlined">
-				{!loading && (!whatsApps || whatsApps.length === 0) && (
-					<div className={classes.emptyState}>
-						<Typography variant="h6" gutterBottom>
-							Conectar tu WhatsApp
-						</Typography>
-						<Typography variant="body2">
-							Creá una conexión y escaneá el QR desde tu teléfono.
-						</Typography>
-						<div className={classes.emptySteps}>
-							<ol>
-								<li>
-									Hacé clic en <b>Agregar</b> y poné un nombre (se usa como nombre de instancia en Evolution).
-								</li>
-								<li>
-									Se abrirá el QR automáticamente.
-								</li>
-								<li>
-									En WhatsApp: <b>Dispositivos vinculados</b> → <b>Vincular un dispositivo</b> → escaneá.
-								</li>
-							</ol>
-						</div>
-						<Button
-							variant="contained"
-							color="primary"
-							onClick={handleOpenWhatsAppModal}
-						>
-							{i18n.t("connections.buttons.add")}
-						</Button>
-					</div>
-				)}
 				<Table size="small">
 					<TableHead>
 						<TableRow>

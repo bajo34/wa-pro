@@ -57,7 +57,7 @@ const SessionSchema = Yup.object().shape({
 		.required("Required"),
 });
 
-const WhatsAppModal = ({ open, onClose, whatsAppId, onSaved }) => {
+const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 	const classes = useStyles();
 	const initialState = {
 		name: "",
@@ -89,16 +89,10 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, onSaved }) => {
 		const whatsappData = { ...values, queueIds: selectedQueueIds };
 
 		try {
-			let resp;
 			if (whatsAppId) {
-				resp = await api.put(`/whatsapp/${whatsAppId}`, whatsappData);
+				await api.put(`/whatsapp/${whatsAppId}`, whatsappData);
 			} else {
-				resp = await api.post("/whatsapp", whatsappData);
-			}
-
-			if (typeof onSaved === "function") {
-				// Prefer the API response; fallback to current id.
-				onSaved(resp?.data || { id: whatsAppId, ...whatsappData });
+				await api.post("/whatsapp", whatsappData);
 			}
 			toast.success(i18n.t("whatsappModal.success"));
 			handleClose();

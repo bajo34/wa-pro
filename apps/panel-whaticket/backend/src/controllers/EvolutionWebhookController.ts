@@ -9,8 +9,6 @@ import Whatsapp from "../models/Whatsapp";
 import { logger } from "../utils/logger";
 import uploadConfig from "../config/upload";
 import { botForwardEvolutionWebhook } from "../services/BotServices/botApi";
-import { getIO } from "../libs/socket";
-import { evolutionExtractQrCode } from "../services/EvolutionServices/evolutionApi";
 
 function getText(msg: any): string {
   const m = msg?.message || {};
@@ -45,41 +43,6 @@ function isMessagesUpsertEvent(body: any): boolean {
     ev === "messagesupsert" ||
     evRaw === "MESSAGES_UPSERT"
   );
-}
-
-function normalizeEvent(raw: any): string {
-  const evRaw = String(raw ?? "");
-  return evRaw
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[.-]/g, "_");
-}
-
-function isQrCodeEvent(ev: string): boolean {
-  return ev === "qrcode_updated" || ev === "qrcode.updated" || ev === "qrcode" || ev === "qrcodeupdate";
-}
-
-function isConnectionUpdateEvent(ev: string): boolean {
-  return (
-    ev === "connection_update" ||
-    ev === "connection.update" ||
-    ev === "connection" ||
-    ev === "conn_update" ||
-    ev === "conn.update"
-  );
-}
-
-function statusFromState(state: string): "CONNECTED" | "DISCONNECTED" | "OPENING" {
-  const s = String(state || "").toLowerCase();
-  if (s === "open" || s === "connected") return "CONNECTED";
-  if (s === "close" || s === "disconnected" || s === "logout") return "DISCONNECTED";
-  return "OPENING";
-}
-
-function emitWhatsAppUpdate(whatsapp: Whatsapp) {
-  const io = getIO();
-  io.emit("whatsappSession", { action: "update", session: whatsapp });
 }
 
 function parseCsvSet(v: string | undefined): Set<string> {
@@ -153,42 +116,6 @@ export const evolutionWebhook = async (req: Request, res: Response): Promise<Res
     }
 
     const body: any = req.body;
-    const ev = normalizeEvent(body?.event);
-
-    // Handle QR/state updates so the panel can show QR immediately without relying on polling.
-    if (isQrCodeEvent(ev)) {
-      const whatsapp = await Whatsapp.findOne({ where: { name: instanceName } });
-      if (!whatsapp) {
-        return res.status(200).json({ ok: true, ignored: true, reason: "unknown_instance" });
-      }
-
-      const qr = evolutionExtractQrCode(body?.data || body);
-      if (qr) {
-        await whatsapp.update({ status: "qrcode", qrcode: qr });
-        emitWhatsAppUpdate(whatsapp);
-      }
-
-      return res.status(200).json({ ok: true });
-    }
-
-    if (isConnectionUpdateEvent(ev)) {
-      const whatsapp = await Whatsapp.findOne({ where: { name: instanceName } });
-      if (!whatsapp) {
-        return res.status(200).json({ ok: true, ignored: true, reason: "unknown_instance" });
-      }
-
-      const state = String(body?.data?.state ?? body?.data?.instance?.state ?? body?.data?.connection?.state ?? "");
-      const status = statusFromState(state);
-      const patch: any = { status };
-      if (status === "CONNECTED") patch.qrcode = "";
-      if (status === "DISCONNECTED") patch.qrcode = "";
-
-      await whatsapp.update(patch);
-      emitWhatsAppUpdate(whatsapp);
-
-      return res.status(200).json({ ok: true });
-    }
-
     if (!isMessagesUpsertEvent(body)) {
       return res.status(200).json({ ok: true, ignored: true, event: body?.event });
     }

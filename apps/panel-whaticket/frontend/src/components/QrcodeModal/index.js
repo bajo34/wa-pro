@@ -9,7 +9,6 @@ import api from "../../services/api";
 
 const QrcodeModal = ({ open, onClose, whatsAppId }) => {
 	const [qrCode, setQrCode] = useState("");
-	const isImageQr = typeof qrCode === "string" && qrCode.trim().startsWith("data:image");
 
 	useEffect(() => {
 		const fetchSession = async () => {
@@ -51,19 +50,11 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
 					<Typography color="primary" gutterBottom>
 						{i18n.t("qrCode.message")}
 					</Typography>
-				{qrCode ? (
-					isImageQr ? (
-						<img
-							src={qrCode}
-							alt="QR"
-							style={{ width: 256, height: 256, imageRendering: "auto" }}
-						/>
-					) : (
+					{qrCode ? (
 						<QRCode value={qrCode} size={256} />
-					)
-				) : (
-					<span>Waiting for QR Code</span>
-				)}
+					) : (
+						<span>Waiting for QR Code</span>
+					)}
 				</Paper>
 			</DialogContent>
 		</Dialog>

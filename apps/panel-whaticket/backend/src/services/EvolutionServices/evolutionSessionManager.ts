@@ -5,8 +5,7 @@ import {
   evolutionConnectionState,
   evolutionCreateInstance,
   evolutionConnect,
-  evolutionExtractQrCode,
-  evolutionSetWebhook
+  evolutionExtractQrCode
 } from "./evolutionApi";
 
 // One polling loop per WhatsApp connection (Whaticket Whatsapp model)
@@ -48,23 +47,23 @@ export async function ensureEvolutionInstance(whatsapp: Whatsapp): Promise<void>
     throw new Error("WhatsApp connection must have a 'name' (used as Evolution instanceName)");
   }
 
-  const base = backendBaseUrl();
-  if (!base) {
-    throw new Error("BACKEND_URL (or API_URL/PUBLIC_URL) is required to register Evolution webhook");
-  }
-
-  const secret = process.env.EVOLUTION_WEBHOOK_SECRET || "";
-  if (!secret) {
-    throw new Error("EVOLUTION_WEBHOOK_SECRET is not set");
-  }
-
-  const webhookUrl = `${base}/webhooks/evolution/${encodeURIComponent(instanceName)}?token=${encodeURIComponent(
-    secret
-  )}`;
-
   // If Evolution doesn't know this instance, create it with a webhook into this backend.
   const state = await evolutionConnectionState(instanceName);
   if (!state) {
+    const base = backendBaseUrl();
+    if (!base) {
+      throw new Error("BACKEND_URL (or API_URL/PUBLIC_URL) is required to register Evolution webhook");
+    }
+
+    const secret = process.env.EVOLUTION_WEBHOOK_SECRET || "";
+    if (!secret) {
+      throw new Error("EVOLUTION_WEBHOOK_SECRET is not set");
+    }
+
+    const webhookUrl = `${base}/webhooks/evolution/${encodeURIComponent(instanceName)}?token=${encodeURIComponent(
+      secret
+    )}`;
+
     await evolutionCreateInstance({
       instanceName,
       webhookUrl,
@@ -72,10 +71,6 @@ export async function ensureEvolutionInstance(whatsapp: Whatsapp): Promise<void>
       withQr: true
     });
   }
-
-  // Ensure webhook stays configured even if the instance already existed.
-  // (Different Evolution builds support either webhook in create payload or a separate endpoint.)
-  await evolutionSetWebhook({ instanceName, webhookUrl, webhookSecret: secret });
 }
 
 export async function startEvolutionSession(whatsapp: Whatsapp): Promise<void> {
@@ -103,11 +98,8 @@ export async function startEvolutionSession(whatsapp: Whatsapp): Promise<void> {
     if (!pollers.has(whatsapp.id)) {
       const t = setInterval(async () => {
         try {
-          await whatsapp.reload();
           const state = await evolutionConnectionState(whatsapp.name);
-          const s = String(state || "").toLowerCase();
-
-          if (s === "open" || s === "connected") {
+          if (state === "open") {
             if (whatsapp.status !== "CONNECTED" || whatsapp.qrcode) {
               await whatsapp.update({ status: "CONNECTED", qrcode: "" });
               emitUpdate(whatsapp);
@@ -115,7 +107,7 @@ export async function startEvolutionSession(whatsapp: Whatsapp): Promise<void> {
             return;
           }
 
-          if (s === "connecting" || s === "qrcode" || s === "qr" || s === "pairing") {
+          if (state === "connecting") {
             const payload2 = await evolutionConnect(whatsapp.name);
             const qr2 = evolutionExtractQrCode(payload2);
             if (qr2 && (whatsapp.qrcode !== qr2 || whatsapp.status !== "qrcode")) {
@@ -125,7 +117,7 @@ export async function startEvolutionSession(whatsapp: Whatsapp): Promise<void> {
             return;
           }
 
-          if (s === "close" || s === "disconnected" || s === "logout") {
+          if (state === "close") {
             if (whatsapp.status !== "DISCONNECTED") {
               await whatsapp.update({ status: "DISCONNECTED", qrcode: "" });
               emitUpdate(whatsapp);

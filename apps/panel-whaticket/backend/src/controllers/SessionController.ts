@@ -45,7 +45,17 @@ export const remove = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  res.clearCookie("jrt");
+  const prod =
+    String(process.env.NODE_ENV || "").toLowerCase() === "production" ||
+    String(process.env.BACKEND_URL || "").startsWith("https://") ||
+    String(process.env.PUBLIC_URL || "").startsWith("https://") ||
+    String(process.env.API_URL || "").startsWith("https://");
+
+  res.clearCookie("jrt", {
+    path: "/",
+    sameSite: prod ? "none" : "lax",
+    secure: prod
+  });
 
   return res.send();
 };
