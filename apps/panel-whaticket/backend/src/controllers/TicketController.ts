@@ -9,6 +9,7 @@ import UpdateTicketService from "../services/TicketServices/UpdateTicketService"
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import formatBody from "../helpers/Mustache";
+import { botDeleteConversationRule, botSetConversationMode } from "../services/BotServices/botApi";
 
 type IndexQuery = {
   searchParam: string;
@@ -89,10 +90,38 @@ export const update = async (
   const { ticketId } = req.params;
   const ticketData: TicketData = req.body;
 
-  const { ticket } = await UpdateTicketService({
+  const { ticket, oldUserId } = await UpdateTicketService({
     ticketData,
     ticketId
   });
+
+  // ✅ Bot handoff rule:
+  // - when a ticket gets assigned to a user, stop the bot (conversation HUMAN_ONLY)
+  // - when it becomes unassigned again, allow the bot back (delete conversation rule)
+  try {
+    const instance = String(ticket.whatsapp?.name || "");
+    const number = String(ticket.contact?.number || "");
+    if (instance && number) {
+      const remoteJid = `${number}@s.whatsapp.net`;
+      const wasAssigned = !!oldUserId;
+      const isAssigned = !!ticket.userId;
+
+      if (!wasAssigned && isAssigned) {
+        void botSetConversationMode({
+          instance,
+          remoteJid,
+          botMode: "HUMAN_ONLY",
+          notes: "ticket_assigned"
+        });
+      }
+
+      if (wasAssigned && !isAssigned) {
+        void botDeleteConversationRule({ instance, remoteJid });
+      }
+    }
+  } catch {
+    // best-effort
+  }
 
   if (ticket.status === "closed") {
     const whatsapp = await ShowWhatsAppService(ticket.whatsappId);

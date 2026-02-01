@@ -8,6 +8,7 @@ import CreateMessageService from "../services/MessageServices/CreateMessageServi
 import Whatsapp from "../models/Whatsapp";
 import { logger } from "../utils/logger";
 import uploadConfig from "../config/upload";
+import { botForwardEvolutionWebhook } from "../services/BotServices/botApi";
 
 function getText(msg: any): string {
   const m = msg?.message || {};
@@ -187,6 +188,19 @@ export const evolutionWebhook = async (req: Request, res: Response): Promise<Res
         mediaUrl
       }
     } as any);
+
+    // Forward inbound messages to the bot only while the ticket is unassigned.
+    // This enforces: "bot responde siempre hasta que se asigne o responda un vendedor".
+    if (!fromMe && !ticket.userId && String(process.env.BOT_URL || "").trim()) {
+      const forwardPayload = {
+        ...(body || {}),
+        // Ensure the bot sees the instance name even if Evolution didn't include it.
+        instance: body?.instance ?? instanceName
+      };
+
+      // Fire-and-forget so we don't slow down Evolution webhook ACK.
+      void botForwardEvolutionWebhook(forwardPayload);
+    }
 
     return res.status(200).json({ ok: true });
   } catch (err: any) {

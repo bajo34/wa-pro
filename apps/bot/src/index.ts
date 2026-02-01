@@ -15,6 +15,8 @@ import { adminRouter } from "./routes/admin.js";
 import { evolutionSendText } from "./services/evolution.js";
 import { getSocket } from "./services/socket.js";
 import { setState } from "./services/state.js";
+import { getConversationRule } from "./services/rules.js";
+import { getContactRule } from "./services/contacts.js";
 
 async function main() {
   await migrate();
@@ -83,6 +85,19 @@ async function main() {
         const remoteJid = row.remote_jid as string;
         const state = row.state as any;
         if (!state) continue;
+
+        // Respect operator handoff / per-conversation rules.
+        // If a conversation (or number) is set to HUMAN_ONLY or OFF, do not send follow-ups.
+        try {
+          const convRule = await getConversationRule(instance, remoteJid);
+          if (convRule && convRule !== 'ON') continue;
+          const number = remoteJid.split('@')[0];
+          const contactRule = await getContactRule(number);
+          if (contactRule && contactRule !== 'ON') continue;
+        } catch {
+          // best-effort
+        }
+
         // Skip if follow-up already sent
         if (state.followup_sent) continue;
         // Determine last bot reply time

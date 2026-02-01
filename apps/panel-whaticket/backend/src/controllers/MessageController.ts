@@ -9,6 +9,7 @@ import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessage";
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
+import { botSetConversationMode } from "../services/BotServices/botApi";
 
 type IndexQuery = {
   pageNumber: string;
@@ -41,6 +42,32 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const medias = req.files as Express.Multer.File[];
 
   const ticket = await ShowTicketService(ticketId);
+
+  // ✅ Human takeover rule:
+  // - if an operator sends a message, we assign the ticket to that operator (if not assigned)
+  // - and tell the bot to stop replying for this conversation.
+  if (!ticket.userId) {
+    const userId = Number(req.user.id);
+    if (Number.isFinite(userId)) {
+      await ticket.update({ userId, status: ticket.status === "closed" ? "open" : ticket.status });
+    }
+  }
+
+  try {
+    const instance = String(ticket.whatsapp?.name || "");
+    const number = String(ticket.contact?.number || "");
+    if (instance && number) {
+      const remoteJid = `${number}@s.whatsapp.net`;
+      void botSetConversationMode({
+        instance,
+        remoteJid,
+        botMode: "HUMAN_ONLY",
+        notes: "operator_message"
+      });
+    }
+  } catch {
+    // best-effort
+  }
 
   SetTicketMessagesAsRead(ticket);
 
