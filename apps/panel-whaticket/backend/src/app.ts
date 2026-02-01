@@ -32,11 +32,11 @@ app.use(Sentry.Handlers.errorHandler());
 
 app.use(async (err: Error, req: Request, res: Response, _: NextFunction) => {
   if (err instanceof AppError) {
-    logger.warn(err);
+    logger.warn({ err }, "Handled AppError");
     return res.status(err.statusCode).json({ error: err.message });
   }
 
-  logger.error(err);
+  logger.error({ err }, "Unhandled error");
   return res.status(500).json({ error: "Internal server error" });
 });
 

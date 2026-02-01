@@ -30,9 +30,13 @@ const AuthUserService = async ({
   email,
   password
 }: Request): Promise<Response> => {
+  // IMPORTANT:
+  // In some Railway setups the DB may be partially migrated (or associations may
+  // not match the existing schema). Including "queues" during login can throw a
+  // Sequelize error which surfaces as a 500 and blocks all logins. We therefore
+  // fetch the user first, then attempt to load queues in a best-effort way.
   const user = await User.findOne({
-    where: { email },
-    include: ["queues"]
+    where: { email }
   });
 
   if (!user) {
@@ -43,10 +47,19 @@ const AuthUserService = async ({
     throw new AppError("ERR_INVALID_CREDENTIALS", 401);
   }
 
+  let userWithQueues = user;
+  try {
+    userWithQueues = (await User.findByPk(user.id, {
+      include: ["queues"]
+    })) as User;
+  } catch (_err) {
+    // Best effort: login should still work even if queues association fails.
+  }
+
   const token = createAccessToken(user);
   const refreshToken = createRefreshToken(user);
 
-  const serializedUser = SerializeUser(user);
+  const serializedUser = SerializeUser(userWithQueues);
 
   return {
     serializedUser,

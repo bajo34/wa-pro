@@ -124,6 +124,10 @@ const useAuth = () => {
   }, []);
 
   useEffect(() => {
+    // Avoid connecting with token=null (backend will disconnect immediately).
+    // Only connect after we have an authenticated user.
+    if (!isAuth || !user?.id) return;
+
     const socket = openSocket();
 
     socket.on("user", (data) => {
@@ -135,7 +139,7 @@ const useAuth = () => {
     return () => {
       socket.disconnect();
     };
-  }, [user]);
+  }, [isAuth, user?.id]);
 
   const handleLogin = async (userData) => {
     setLoading(true);
