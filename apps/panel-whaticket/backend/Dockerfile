@@ -37,12 +37,15 @@ ENV CHROME_BIN=google-chrome-stable
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+# Install all deps for build (TypeScript lives in devDeps), then prune.
+# We intentionally avoid npm ci here because this repo does not ship a package-lock.json
+# and Railway Docker builds would fail with `npm ci`.
+RUN npm install
 
 COPY . .
-RUN npm run build
+RUN npm run build && npm prune --omit=dev
 
 EXPOSE 3000
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD sh -lc "dockerize -wait tcp://${DB_HOST}:5432 && npx sequelize db:migrate && node dist/server.js"
+CMD sh -lc "dockerize -wait tcp://${DB_HOST}:${DB_PORT:-5432} && npx sequelize db:migrate && node dist/server.js"

@@ -1,5 +1,7 @@
 _writeFrontendEnvVars() {
-    ENV_JSON="$(jq --compact-output --null-input 'env | with_entries(select(.key | startswith("REACT_APP_")))')"
+    # The frontend reads runtime configuration from window.ENV (see src/config.js).
+    # Expose only VITE_* variables to avoid leaking unrelated env vars.
+    ENV_JSON="$(jq --compact-output --null-input 'env | with_entries(select(.key | startswith("VITE_")))')"
     ENV_JSON_ESCAPED="$(printf "%s" "${ENV_JSON}" | sed -e 's/[\&/]/\\&/g')"
     sed -i "s/<noscript id=\"env-insertion-point\"><\/noscript>/<script>var ENV=${ENV_JSON_ESCAPED}<\/script>/g" ${PUBLIC_HTML}index.html
 }
@@ -21,7 +23,8 @@ _addSslConfig() {
         echo "ssl_certificate ${SSL_CERTIFICATE};" >> ${FILE_CONF};
         echo "ssl_certificate_key ${SSL_CERTIFICATE_KEY};" >> ${FILE_CONF};
     else
-        echo 'listen 80;' >> ${FILE_CONF};
+        # Railway typically injects PORT. If not set, default to 80.
+        echo "listen ${PORT:-80};" >> ${FILE_CONF};
         echo "ssl ${1} not found >> ${SSL_CERTIFICATE} -> ${SSL_CERTIFICATE_KEY}"
     fi;
 }
