@@ -458,6 +458,8 @@ const messages = {
           "This color is already in use, pick another one.",
         ERR_WAPP_GREETING_REQUIRED:
           "Greeting message is required if there is more than one queue.",
+        ERR_CONTACTS_IMPORT_UNSUPPORTED_PROVIDER:
+          "Phone contact import is not available when using Evolution. Add contacts manually or import a CSV.",
       },
     },
   },

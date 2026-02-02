@@ -465,6 +465,8 @@ const messages = {
           "Este color ya está en uso, elija otro.",
         ERR_WAPP_GREETING_REQUIRED:
           "El mensaje de saludo es obligatorio cuando hay más de una cola.",
+        ERR_CONTACTS_IMPORT_UNSUPPORTED_PROVIDER:
+          "Importar contactos del teléfono no está disponible con Evolution. Cargá contactos manualmente o por CSV.",
       },
     },
   },

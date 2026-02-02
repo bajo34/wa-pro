@@ -189,9 +189,11 @@ export const evolutionWebhook = async (req: Request, res: Response): Promise<Res
       }
     } as any);
 
-    // Forward inbound messages to the bot only while the ticket is unassigned.
-    // This enforces: "bot responde siempre hasta que se asigne o responda un vendedor".
-    if (!fromMe && !ticket.userId && String(process.env.BOT_URL || "").trim()) {
+    // Forward inbound messages to the bot (optional).
+    // Human takeover is handled by the panel send flow: when an operator replies, we set
+    // the bot conversation mode to HUMAN_ONLY. So here we can forward all inbound messages
+    // and let the bot decide whether to answer.
+    if (!fromMe && String(process.env.BOT_URL || "").trim()) {
       const forwardPayload = {
         ...(body || {}),
         // Ensure the bot sees the instance name even if Evolution didn't include it.

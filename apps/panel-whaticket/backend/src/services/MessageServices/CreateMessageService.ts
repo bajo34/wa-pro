@@ -10,6 +10,7 @@ interface MessageData {
   contactId?: number;
   fromMe?: boolean;
   read?: boolean;
+  ack?: number;
   mediaType?: string;
   mediaUrl?: string;
 }

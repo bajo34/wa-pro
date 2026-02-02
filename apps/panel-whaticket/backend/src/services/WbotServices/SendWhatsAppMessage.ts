@@ -10,6 +10,7 @@ import formatBody from "../../helpers/Mustache";
 
 import { evolutionSendText } from "../EvolutionServices/evolutionApi";
 import CreateMessageService from "../MessageServices/CreateMessageService";
+import { botSetConversationMode } from "../BotServices/botApi";
 
 const useEvolution = () => {
   return (
@@ -57,9 +58,28 @@ const SendWhatsAppMessage = async ({
           body: rendered,
           fromMe: true,
           read: true,
+          // When using Evolution, we don't get WWebJS ack events. Mark as "sent" so the UI
+          // doesn't keep the clock forever.
+          ack: 1,
           quotedMsgId: quotedMsg?.id
         }
       } as any);
+
+      // Operator replied => disable bot for this conversation (prevents bot answering after takeover)
+      // Safe no-op if BOT_URL/BOT_ADMIN_TOKEN are not configured.
+      try {
+        const remoteJid = ticket.isGroup
+          ? `${ticket.contact.number}@g.us`
+          : `${ticket.contact.number}@s.whatsapp.net`;
+        void botSetConversationMode({
+          instance: instanceName,
+          remoteJid,
+          botMode: "HUMAN_ONLY",
+          notes: "operator_reply"
+        });
+      } catch {
+        // ignore
+      }
 
       // Return a dummy object to satisfy the previous signature.
       return { id: { id: msgId } } as any;

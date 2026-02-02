@@ -15,7 +15,10 @@ export const initIO = (httpServer: Server): SocketIO => {
   });
 
   io.on("connection", socket => {
-    const { token } = socket.handshake.query;
+    // token can come from query (legacy) or auth (socket.io v4 recommended)
+    const rawToken: any =
+      (socket.handshake as any)?.auth?.token ?? (socket.handshake.query as any)?.token;
+    const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
     let tokenData = null;
     try {
       tokenData = verify(token, authConfig.secret);

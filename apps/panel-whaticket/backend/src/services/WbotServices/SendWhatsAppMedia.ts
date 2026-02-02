@@ -11,6 +11,7 @@ import Ticket from "../../models/Ticket";
 import formatBody from "../../helpers/Mustache";
 import CreateMessageService from "../MessageServices/CreateMessageService";
 import { evolutionSendMedia } from "../EvolutionServices/evolutionApi";
+import { botSetConversationMode } from "../BotServices/botApi";
 
 const useEvolution = () => {
   return (
@@ -81,10 +82,29 @@ const SendWhatsAppMedia = async ({
           body: caption || media.filename,
           fromMe: true,
           read: true,
+          // When using Evolution, we don't get WWebJS ack events. Mark as "sent" so the UI
+          // doesn't keep the clock forever.
+          ack: 1,
           mediaUrl: media.filename,
           mediaType
         }
       } as any);
+
+      // Operator replied => disable bot for this conversation (prevents bot answering after takeover)
+      // Safe no-op if BOT_URL/BOT_ADMIN_TOKEN are not configured.
+      try {
+        const remoteJid = ticket.isGroup
+          ? `${ticket.contact.number}@g.us`
+          : `${ticket.contact.number}@s.whatsapp.net`;
+        void botSetConversationMode({
+          instance: instanceName,
+          remoteJid,
+          botMode: "HUMAN_ONLY",
+          notes: "operator_reply"
+        });
+      } catch {
+        // ignore
+      }
 
       // Do NOT delete the file; Evolution needs it accessible and WhatsApp history benefits from it.
       return { id: { id: msgId } } as any;

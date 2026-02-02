@@ -103,6 +103,22 @@ const Contacts = () => {
   const [deletingContact, setDeletingContact] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [canImportPhoneContacts, setCanImportPhoneContacts] = useState(true);
+
+  useEffect(() => {
+    // Determine feature availability based on backend provider.
+    // In Evolution mode, /contacts/import (phone contacts via WWebJS) is not supported.
+    const fetchProvider = async () => {
+      try {
+        const { data } = await api.get("/health");
+        const provider = String(data?.provider || "").toUpperCase();
+        setCanImportPhoneContacts(provider !== "EVOLUTION");
+      } catch {
+        // if we can't fetch, keep enabled to avoid blocking the UI
+      }
+    };
+    fetchProvider();
+  }, []);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -262,7 +278,14 @@ const Contacts = () => {
           <Button
             variant="contained"
             color="primary"
-            onClick={(e) => setConfirmOpen(true)}
+            disabled={!canImportPhoneContacts}
+            onClick={(e) => {
+              if (!canImportPhoneContacts) {
+                toast.info(i18n.t("backendErrors.ERR_CONTACTS_IMPORT_UNSUPPORTED_PROVIDER"));
+                return;
+              }
+              setConfirmOpen(true);
+            }}
           >
             {i18n.t("contacts.buttons.import")}
           </Button>

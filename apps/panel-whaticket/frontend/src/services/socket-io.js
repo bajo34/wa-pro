@@ -1,26 +1,88 @@
-import openSocket from "socket.io-client";
-import { getBackendUrl } from "../config";
+import socketIO from "socket.io-client";
 
-function connectToSocket() {
+import api from "./api";
+
+// Single socket instance for the entire app.
+let socket;
+let refreshing = false;
+
+const backendUrl = process.env.REACT_APP_BACKEND_URL;
+
+const getStoredToken = () => {
+  try {
     const raw = localStorage.getItem("token");
-    if (!raw) {
-      // Don't attempt to connect without a token (prevents token=null loops)
-      return openSocket(getBackendUrl(), { autoConnect: false });
-    }
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
 
-    let token;
-    try {
-      token = JSON.parse(raw);
-    } catch {
-      token = raw;
+const refreshAccessToken = async () => {
+  if (refreshing) return null;
+  refreshing = true;
+  try {
+    const { data } = await api.post("/auth/refresh_token");
+    if (data?.token) {
+      localStorage.setItem("token", JSON.stringify(data.token));
+      return data.token;
     }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    refreshing = false;
+  }
+};
 
-    return openSocket(getBackendUrl(), {
-      transports: ["websocket", "polling", "flashsocket"],
-      query: {
-        token,
-      },
-    });
+const applyTokenToSocket = (s, token) => {
+  // Backward compatible with backend expecting token in query.
+  s.io.opts.query = { ...(s.io.opts.query || {}), token };
+  // Also provide via auth, in case the backend was updated.
+  s.auth = { ...(s.auth || {}), token };
+};
+
+const ensureConnected = async (s) => {
+  const token = getStoredToken();
+  applyTokenToSocket(s, token);
+  if (!s.connected) s.connect();
+};
+
+export default function openSocket() {
+  if (socket) return socket;
+
+  socket = socketIO(backendUrl, {
+    autoConnect: false,
+    transports: ["websocket", "polling"],
+    withCredentials: true
+  });
+
+  socket.on("connect", () => {
+    // nothing
+  });
+
+  // When the access token expires, the backend will disconnect the socket.
+  // We try a refresh and reconnect with the new token.
+  const tryRefreshAndReconnect = async () => {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      applyTokenToSocket(socket, newToken);
+      socket.connect();
+    }
+  };
+
+  socket.on("disconnect", (reason) => {
+    if (reason === "io server disconnect" || reason === "transport close") {
+      void tryRefreshAndReconnect();
+    }
+  });
+
+  socket.on("connect_error", () => {
+    void tryRefreshAndReconnect();
+  });
+
+  // Initial connect
+  void ensureConnected(socket);
+
+  return socket;
 }
-
-export default connectToSocket;
