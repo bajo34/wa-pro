@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
+import fetch from "node-fetch";
 
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTicketService";
@@ -102,6 +103,46 @@ function tryPersistBase64Media(msgId: string, mediaType: string | undefined, bas
   }
 }
 
+async function downloadAndPersistRemoteMedia(
+  msgId: string,
+  mediaType: string | undefined,
+  url: string
+): Promise<string | null> {
+  if (!url || typeof url !== "string") return null;
+  if (!/^https?:\/\//i.test(url)) return null;
+
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+
+    const contentType = String(r.headers.get("content-type") || "").toLowerCase();
+    const lenHeader = r.headers.get("content-length");
+    const len = lenHeader ? Number(lenHeader) : NaN;
+    if (Number.isFinite(len) && len > 20 * 1024 * 1024) return null;
+
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length > 20 * 1024 * 1024) return null;
+
+    let ext = guessExt(mediaType);
+    if (contentType.includes("image/")) ext = contentType.split("image/")[1].split(";")[0] || ext;
+    if (contentType.includes("video/")) ext = contentType.split("video/")[1].split(";")[0] || ext;
+    if (contentType.includes("audio/")) ext = contentType.split("audio/")[1].split(";")[0] || ext;
+
+    // Normalize weird types.
+    if (ext === "jpeg") ext = "jpg";
+
+    const filename = `ev_${Date.now()}_${msgId}.${ext}`;
+    const out = path.join(uploadConfig.directory, filename);
+
+    fs.mkdirSync(uploadConfig.directory, { recursive: true });
+    fs.writeFileSync(out, buf);
+
+    return filename;
+  } catch {
+    return null;
+  }
+}
+
 export const evolutionWebhook = async (req: Request, res: Response): Promise<Response> => {
   try {
     const instanceName = String(req.params.instanceName || "");
@@ -157,7 +198,9 @@ export const evolutionWebhook = async (req: Request, res: Response): Promise<Res
     let mediaUrl: string | undefined;
 
     if (typeof evoMediaUrl === "string" && /^https?:\/\//i.test(evoMediaUrl)) {
-      mediaUrl = evoMediaUrl;
+      // Prefer persisting media locally to avoid expiring URLs/CORS issues.
+      const persisted = await downloadAndPersistRemoteMedia(msgId, mediaType, evoMediaUrl);
+      mediaUrl = persisted || evoMediaUrl;
     } else if (typeof evoBase64 === "string" && mediaType) {
       const persisted = tryPersistBase64Media(msgId, mediaType, evoBase64);
       if (persisted) mediaUrl = persisted;
@@ -183,6 +226,8 @@ export const evolutionWebhook = async (req: Request, res: Response): Promise<Res
         contactId: fromMe ? undefined : contact.id,
         body: bodyText,
         fromMe,
+        // Avoid the UI getting stuck on "clock" for bot/fromMe messages.
+        ack: fromMe ? 1 : 0,
         read: fromMe,
         mediaType,
         mediaUrl

@@ -113,10 +113,14 @@ export const update = async (
           botMode: "HUMAN_ONLY",
           notes: "ticket_assigned"
         });
+
+        // Persist last selected bot mode in the panel.
+        void ticket.update({ botMode: "HUMAN_ONLY" });
       }
 
       if (wasAssigned && !isAssigned) {
         void botDeleteConversationRule({ instance, remoteJid });
+        void ticket.update({ botMode: "ON" });
       }
     }
   } catch {
@@ -135,6 +139,54 @@ export const update = async (
       });
     }
   }
+
+  return res.status(200).json(ticket);
+};
+
+export const updateBotMode = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { ticketId } = req.params;
+  const raw = String(req.body?.botMode || "").toUpperCase();
+
+  const ticket = await ShowTicketService(ticketId);
+
+  const instance = String(ticket.whatsapp?.name || "");
+  const number = String(ticket.contact?.number || "");
+  const remoteJid = instance && number ? `${number}@s.whatsapp.net` : "";
+
+  // Default behavior:
+  // - ON  => bot can reply (delete any override rule)
+  // - HUMAN_ONLY => bot muted (rule)
+  // - OFF => bot disabled (rule)
+  let next: "ON" | "OFF" | "HUMAN_ONLY" = "ON";
+  if (raw === "OFF" || raw === "HUMAN_ONLY" || raw === "ON") next = raw as any;
+
+  try {
+    if (instance && remoteJid) {
+      if (next === "ON") {
+        void botDeleteConversationRule({ instance, remoteJid });
+      } else {
+        void botSetConversationMode({
+          instance,
+          remoteJid,
+          botMode: next,
+          notes: "panel_toggle"
+        });
+      }
+    }
+  } catch {
+    // best-effort
+  }
+
+  await ticket.update({ botMode: next });
+
+  const io = getIO();
+  io.to(ticket.status).to(ticket.id.toString()).emit("ticket", {
+    action: "update",
+    ticket
+  });
 
   return res.status(200).json(ticket);
 };

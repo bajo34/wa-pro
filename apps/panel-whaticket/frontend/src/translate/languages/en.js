@@ -122,6 +122,7 @@ const messages = {
         title: "Contacts",
         toasts: {
           deleted: "Contact deleted sucessfully!",
+          imported: "Import finished",
         },
         searchPlaceholder: "Search ...",
         confirmationModal: {
@@ -133,6 +134,7 @@ const messages = {
         },
         buttons: {
           import: "Import Contacts",
+          importCsv: "Import CSV",
           add: "Add Contact",
         },
         table: {
@@ -393,7 +395,37 @@ const messages = {
         buttons: {
           edit: "Edit contact",
         },
+        tabs: {
+          contact: "Contact",
+          ticket: "Ticket",
+          history: "History",
+        },
         extraInfo: "Other information",
+        ticket: {
+          title: "Ticket tools",
+          botMode: {
+            label: "Mode",
+            on: "Bot",
+            human: "Human",
+            off: "Off",
+            actions: {
+              on: "Bot",
+              human: "Human",
+              off: "Off",
+            },
+          },
+          tags: "Tags",
+          tagsPlaceholder: "e.g. hot lead, follow-up",
+          tagsEmpty: "No tags",
+          notes: "Internal notes",
+          notesPlaceholder: "Internal notes (not sent to the customer)",
+          notesEmpty: "No notes",
+          add: "Add",
+        },
+        history: {
+          title: "Recent tickets",
+          empty: "No history",
+        },
       },
       ticketOptionsMenu: {
         delete: "Delete",

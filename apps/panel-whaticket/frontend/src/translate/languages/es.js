@@ -124,6 +124,7 @@ const messages = {
         title: "Contactos",
         toasts: {
           deleted: "¡Contacto borrado satisfactoriamente!",
+          imported: "Importación finalizada",
         },
         searchPlaceholder: "Buscar...",
         confirmationModal: {
@@ -136,6 +137,7 @@ const messages = {
         },
         buttons: {
           import: "Importar Contactos",
+          importCsv: "Importar CSV",
           add: "Agregar Contacto",
         },
         table: {
@@ -399,7 +401,37 @@ const messages = {
         buttons: {
           edit: "Editar contacto",
         },
+        tabs: {
+          contact: "Contacto",
+          ticket: "Ticket",
+          history: "Historial",
+        },
         extraInfo: "Otra información",
+        ticket: {
+          title: "Herramientas del ticket",
+          botMode: {
+            label: "Modo",
+            on: "Bot",
+            human: "Humano",
+            off: "Off",
+            actions: {
+              on: "Bot",
+              human: "Humano",
+              off: "Off",
+            },
+          },
+          tags: "Etiquetas",
+          tagsPlaceholder: "Ej: lead caliente, seguimiento",
+          tagsEmpty: "Sin etiquetas",
+          notes: "Notas internas",
+          notesPlaceholder: "Notas internas (no se envían al cliente)",
+          notesEmpty: "Sin notas",
+          add: "Agregar",
+        },
+        history: {
+          title: "Últimos tickets",
+          empty: "Sin historial",
+        },
       },
       ticketOptionsMenu: {
         delete: "Borrar",

@@ -1,12 +1,15 @@
 import socketIO from "socket.io-client";
 
 import api from "./api";
+import { getBackendUrl } from "../config";
 
 // Single socket instance for the entire app.
 let socket;
 let refreshing = false;
 
-const backendUrl = process.env.REACT_APP_BACKEND_URL;
+// This project uses Vite (import.meta.env) or window.ENV in Docker.
+// Using getBackendUrl() keeps it consistent with the API client.
+const backendUrl = getBackendUrl();
 
 const getStoredToken = () => {
   try {

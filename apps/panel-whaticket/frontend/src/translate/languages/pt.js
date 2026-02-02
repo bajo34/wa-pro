@@ -124,6 +124,7 @@ const messages = {
         title: "Contatos",
         toasts: {
           deleted: "Contato excluído com sucesso!",
+          imported: "Importação finalizada",
         },
         searchPlaceholder: "Pesquisar...",
         confirmationModal: {
@@ -135,6 +136,7 @@ const messages = {
         },
         buttons: {
           import: "Importar Contatos",
+          importCsv: "Importar CSV",
           add: "Adicionar Contato",
         },
         table: {
@@ -398,7 +400,37 @@ const messages = {
         buttons: {
           edit: "Editar contato",
         },
+        tabs: {
+          contact: "Contato",
+          ticket: "Ticket",
+          history: "Histórico",
+        },
         extraInfo: "Outras informações",
+        ticket: {
+          title: "Ferramentas do ticket",
+          botMode: {
+            label: "Modo",
+            on: "Bot",
+            human: "Humano",
+            off: "Off",
+            actions: {
+              on: "Bot",
+              human: "Humano",
+              off: "Off",
+            },
+          },
+          tags: "Etiquetas",
+          tagsPlaceholder: "Ex: lead quente, acompanhamento",
+          tagsEmpty: "Sem etiquetas",
+          notes: "Notas internas",
+          notesPlaceholder: "Notas internas (não são enviadas ao cliente)",
+          notesEmpty: "Sem notas",
+          add: "Adicionar",
+        },
+        history: {
+          title: "Últimos tickets",
+          empty: "Sem histórico",
+        },
       },
       ticketOptionsMenu: {
         delete: "Deletar",

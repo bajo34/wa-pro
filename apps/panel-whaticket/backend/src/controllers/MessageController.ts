@@ -64,6 +64,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
         botMode: "HUMAN_ONLY",
         notes: "operator_message"
       });
+
+      // Persist last selected bot mode in the panel.
+      void ticket.update({ botMode: "HUMAN_ONLY" });
     }
   } catch {
     // best-effort

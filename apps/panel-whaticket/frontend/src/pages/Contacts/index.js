@@ -35,6 +35,50 @@ import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../../components/Can";
 
+const parseCsv = (text) => {
+  const lines = String(text || "").replace(/\r/g, "").split("\n").filter(Boolean);
+  if (!lines.length) return [];
+
+  const split = (line) => {
+    // Basic CSV split supporting quotes.
+    const out = [];
+    let cur = "";
+    let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        inQ = !inQ;
+        continue;
+      }
+      if (!inQ && (ch === "," || ch === ";" || ch === "\t")) {
+        out.push(cur.trim());
+        cur = "";
+        continue;
+      }
+      cur += ch;
+    }
+    out.push(cur.trim());
+    return out;
+  };
+
+  const header = split(lines[0]).map((h) => h.toLowerCase());
+  const idxName = header.findIndex((h) => ["name", "nombre", "nombre y apellido"].includes(h));
+  const idxNumber = header.findIndex((h) => ["number", "telefono", "tel", "celular", "whatsapp"].includes(h));
+  const idxEmail = header.findIndex((h) => ["email", "correo"].includes(h));
+
+  const start = idxName !== -1 || idxNumber !== -1 || idxEmail !== -1 ? 1 : 0;
+
+  const rows = [];
+  for (const line of lines.slice(start)) {
+    const cols = split(line);
+    const name = cols[idxName] ?? cols[0] ?? "";
+    const number = cols[idxNumber] ?? cols[1] ?? "";
+    const email = idxEmail !== -1 ? cols[idxEmail] : "";
+    rows.push({ name, number, email });
+  }
+  return rows;
+};
+
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
     const contacts = action.payload;
@@ -104,6 +148,8 @@ const Contacts = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [canImportPhoneContacts, setCanImportPhoneContacts] = useState(true);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const fileInputId = "contacts-csv-file";
 
   useEffect(() => {
     // Determine feature availability based on backend provider.
@@ -219,6 +265,24 @@ const Contacts = () => {
     }
   };
 
+  const handleCsvFile = async (file) => {
+    if (!file) return;
+    setCsvImporting(true);
+    try {
+      const text = await file.text();
+      const contacts = parseCsv(text);
+      const { data } = await api.post("/contacts/import/csv", { contacts });
+      toast.success(
+        i18n.t("contacts.toasts.imported") +
+          ` (${data?.createdOrUpdated || 0} ok, ${data?.skipped || 0} skip, ${data?.errors || 0} err)`
+      );
+      history.go(0);
+    } catch (err) {
+      toastError(err);
+    }
+    setCsvImporting(false);
+  };
+
   const loadMore = () => {
     setPageNumber((prevState) => prevState + 1);
   };
@@ -262,6 +326,17 @@ const Contacts = () => {
       <MainHeader>
         <Title>{i18n.t("contacts.title")}</Title>
         <MainHeaderButtonsWrapper>
+          <input
+            id={fileInputId}
+            type="file"
+            accept=".csv,text/csv"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              void handleCsvFile(file);
+            }}
+          />
           <TextField
             placeholder={i18n.t("contacts.searchPlaceholder")}
             type="search"
@@ -275,6 +350,17 @@ const Contacts = () => {
               ),
             }}
           />
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={csvImporting}
+            onClick={() => {
+              const el = document.getElementById(fileInputId);
+              if (el) el.click();
+            }}
+          >
+            {i18n.t("contacts.buttons.importCsv")}
+          </Button>
           <Button
             variant="contained"
             color="primary"
