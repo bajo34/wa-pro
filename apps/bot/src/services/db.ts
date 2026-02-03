@@ -36,12 +36,18 @@ export const pool = new Pool({
 });
 
 export async function migrate() {
-  const sqlPath = path.join(process.cwd(), 'sql', '001_init.sql');
-  const sql = await fs.readFile(sqlPath, 'utf8');
   const client = await pool.connect();
   try {
     await client.query('begin');
-    await client.query(sql);
+    const dir = path.join(process.cwd(), 'sql');
+    const files = (await fs.readdir(dir))
+      .filter((f) => f.endsWith('.sql'))
+      .sort((a, b) => a.localeCompare(b));
+
+    for (const file of files) {
+      const sql = await fs.readFile(path.join(dir, file), 'utf8');
+      if (sql.trim()) await client.query(sql);
+    }
     await client.query('commit');
   } catch (e) {
     await client.query('rollback');

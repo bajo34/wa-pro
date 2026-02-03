@@ -7,6 +7,7 @@ import { getState, setState, seenDedupe, markDedupe } from '../services/state.js
 import { getContactRule, setContactRule } from '../services/contacts.js';
 import { getConversationRule, setConversationRule } from '../services/rules.js';
 import { getSocket } from '../services/socket.js';
+import { matchFaq, matchPlaybook, renderTemplate, logDecision, getIntelligenceSettings } from '../services/intelligence.js';
 import { createHash } from 'node:crypto';
 import type { ConvState } from '../services/state.js';
 
@@ -314,6 +315,39 @@ async function handleAggregatedMessage(key: string, instance: string, remoteJid:
         last_intent: 'test_mode'
       });
       return;
+    }
+
+    // Intelligence: FAQ / Playbooks (panel-configurable)
+    try {
+      const settings = await getIntelligenceSettings();
+      const faq = await matchFaq(rawText);
+      if (faq?.answer) {
+        const reply = renderTemplate(String(faq.answer), { state, settings });
+        await logDecision({ instance, remoteJid, intent: 'faq', confidence: 0.99, data: { faqId: faq.id } });
+        scheduleReply(reply, {
+          ...state,
+          stage: state.stage ?? 'idle',
+          last_intent: 'faq',
+          last_faq_id: faq.id
+        });
+        return;
+      }
+
+      const pb = await matchPlaybook(rawText);
+      if (pb?.template) {
+        const reply = renderTemplate(String(pb.template), { state, settings, playbook: pb });
+        await logDecision({ instance, remoteJid, intent: String(pb.intent ?? 'playbook'), confidence: 0.9, data: { playbookId: pb.id } });
+        scheduleReply(reply, {
+          ...state,
+          stage: state.stage ?? 'idle',
+          last_intent: String(pb.intent ?? 'playbook'),
+          last_playbook_id: pb.id
+        });
+        return;
+      }
+    } catch (e) {
+      // Best-effort. Never break the bot if intelligence subsystem fails.
+      console.error('intelligence match error', e);
     }
 
     // Low-signal acknowledgements: reply only occasionally and only when not

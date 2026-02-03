@@ -16,6 +16,20 @@ import {
   addQuickReply,
   deleteQuickReply
 } from '../services/rules.js';
+import {
+  getIntelligenceSettings,
+  updateIntelligenceSettings,
+  listFaq,
+  createFaq,
+  deleteFaq,
+  listPlaybooks,
+  createPlaybook,
+  deletePlaybook,
+  listExamples,
+  createExample,
+  deleteExample,
+  listDecisions
+} from '../services/intelligence.js';
 
 export const adminRouter = Router();
 
@@ -340,6 +354,140 @@ adminRouter.get('/metrics', async (req, res) => {
     );
     const handedToHuman = Number(handed.rows[0].count ?? 0);
     return res.json({ ok: true, instance, metrics: { totalConversations, totalLeads, handedToHuman } });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+/**
+ * Intelligence configuration (Settings, FAQ, Playbooks, Examples, Decisions)
+ */
+adminRouter.get('/intelligence/settings', async (_req, res) => {
+  try {
+    const settings = await getIntelligenceSettings();
+    return res.json({ ok: true, settings });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+adminRouter.put('/intelligence/settings', async (req, res) => {
+  try {
+    const settings = await updateIntelligenceSettings(req.body ?? {});
+    return res.json({ ok: true, settings });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+adminRouter.get('/intelligence/faqs', async (_req, res) => {
+  try {
+    const faqs = await listFaq();
+    return res.json({ ok: true, faqs });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+adminRouter.post('/intelligence/faqs', async (req, res) => {
+  try {
+    const faq = await createFaq({
+      title: req.body?.title,
+      triggers: req.body?.triggers ?? [],
+      answer: req.body?.answer ?? '',
+      enabled: req.body?.enabled
+    });
+    return res.json({ ok: true, faq });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+adminRouter.delete('/intelligence/faqs/:id', async (req, res) => {
+  const idNum = Number(req.params.id);
+  if (!Number.isFinite(idNum)) return res.status(400).json({ ok: false, message: 'valid id required' });
+  try {
+    await deleteFaq(idNum);
+    return res.json({ ok: true });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+adminRouter.get('/intelligence/playbooks', async (_req, res) => {
+  try {
+    const playbooks = await listPlaybooks();
+    return res.json({ ok: true, playbooks });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+adminRouter.post('/intelligence/playbooks', async (req, res) => {
+  try {
+    const playbook = await createPlaybook({
+      intent: String(req.body?.intent ?? ''),
+      triggers: req.body?.triggers ?? [],
+      template: String(req.body?.template ?? ''),
+      enabled: req.body?.enabled
+    });
+    return res.json({ ok: true, playbook });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+adminRouter.delete('/intelligence/playbooks/:id', async (req, res) => {
+  const idNum = Number(req.params.id);
+  if (!Number.isFinite(idNum)) return res.status(400).json({ ok: false, message: 'valid id required' });
+  try {
+    await deletePlaybook(idNum);
+    return res.json({ ok: true });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+adminRouter.get('/intelligence/examples', async (_req, res) => {
+  try {
+    const examples = await listExamples();
+    return res.json({ ok: true, examples });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+adminRouter.post('/intelligence/examples', async (req, res) => {
+  try {
+    const example = await createExample({
+      intent: String(req.body?.intent ?? ''),
+      user_text: String(req.body?.user_text ?? ''),
+      ideal_answer: String(req.body?.ideal_answer ?? ''),
+      notes: req.body?.notes
+    });
+    return res.json({ ok: true, example });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+adminRouter.delete('/intelligence/examples/:id', async (req, res) => {
+  const idNum = Number(req.params.id);
+  if (!Number.isFinite(idNum)) return res.status(400).json({ ok: false, message: 'valid id required' });
+  try {
+    await deleteExample(idNum);
+    return res.json({ ok: true });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+adminRouter.get('/intelligence/decisions', async (req, res) => {
+  const limitRaw = Number(req.query.limit ?? 100);
+  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 100;
+  try {
+    const decisions = await listDecisions(limit);
+    return res.json({ ok: true, decisions });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
   }
