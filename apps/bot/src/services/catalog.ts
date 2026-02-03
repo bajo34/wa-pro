@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { env } from "../lib/env.js";
+import { pool } from "./db.js";
 
 export type CatalogItem = {
   id: string;
@@ -21,6 +22,16 @@ export type CatalogItem = {
   category?: string;
   description?: string; // limpio, sin hashtags ni prefijos
   descriptionRaw?: string; // opcional, backup
+
+  // Vehicle-oriented optional fields (used when catalog comes from public.vehicles)
+  brand?: string;
+  model?: string;
+  year?: number;
+  km?: number;
+  transmission?: string;
+  engine?: string;
+  fuel?: string;
+  color?: string;
 };
 
 const sample: CatalogItem[] = [
@@ -32,6 +43,139 @@ const sample: CatalogItem[] = [
 
 let cached: CatalogItem[] | null = null;
 let cachedAt = 0;
+
+type VehicleRow = {
+  id: string;
+  title: string | null;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  price: string | number | null;
+  currency: string | null;
+  slug: string | null;
+  pictures: string[] | null;
+  permalink: string | null;
+  // legacy columns
+  Km: number | null;
+  Motor: string | null;
+  Caja: string | null;
+  Combustible: string | null;
+  // new-ish columns
+  km: number | null;
+  engine: string | null;
+  transmission: string | null;
+  color: string | null;
+};
+
+function coerceNumber(v: any): number | undefined {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  const n = Number(String(v).trim());
+  return Number.isFinite(n) ? n : undefined;
+}
+
+async function loadVehiclesFromDb(timeoutMs: number): Promise<CatalogItem[]> {
+  const where: string[] = ["status = 'active'"];
+  const params: any[] = [];
+
+  if (env.catalogDealershipId) {
+    params.push(env.catalogDealershipId);
+    where.push(`dealership_id = $${params.length}`);
+  }
+
+  const sql = `
+    select
+      id,
+      title,
+      brand,
+      model,
+      year,
+      price,
+      currency,
+      slug,
+      pictures,
+      permalink,
+      "Km" as "Km",
+      "Motor" as "Motor",
+      "Caja" as "Caja",
+      "Combustible" as "Combustible",
+      km,
+      engine,
+      transmission,
+      color
+    from public.vehicles
+    where ${where.join(" and ")}
+    order by updated_at desc nulls last
+    limit 500
+  `;
+
+  const q = pool.query<VehicleRow>(sql, params);
+  const r = await Promise.race([
+    q,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("vehicles query timeout")), timeoutMs))
+  ]);
+
+  const rows = (r as any).rows as VehicleRow[];
+
+  return rows
+    .map((row) => {
+      const title = (row.title ?? "").trim();
+      const brand = (row.brand ?? "").trim();
+      const model = (row.model ?? "").trim();
+
+      const name = title || [brand, model].filter(Boolean).join(" ") || row.id;
+      const year = row.year ?? undefined;
+      const km = coerceNumber(row.km ?? row.Km);
+      const transmission = (row.transmission ?? row.Caja ?? undefined)?.toString().trim();
+      const engine = (row.engine ?? row.Motor ?? undefined)?.toString().trim();
+      const fuel = (row.Combustible ?? undefined)?.toString().trim();
+      const color = (row.color ?? undefined)?.toString().trim();
+
+      const priceNumber = coerceMoneyNumber(row.price);
+      const currency = (row.currency ?? (priceNumber !== undefined ? "ARS" : undefined)) as any;
+
+      const url = row.permalink
+        ? String(row.permalink)
+        : env.publicUrl && row.slug
+          ? `${env.publicUrl.replace(/\/$/, "")}/autos/${row.slug}`
+          : undefined;
+
+      const pics = Array.isArray(row.pictures) ? row.pictures : [];
+      const image = normalizeImageUrl(pics[0] ?? pics[1], url);
+
+      const parts: string[] = [];
+      if (year) parts.push(String(year));
+      if (km !== undefined) parts.push(`${Math.round(km).toLocaleString("es-AR")} km`);
+      if (transmission) parts.push(transmission);
+      if (fuel) parts.push(fuel);
+      if (engine) parts.push(engine);
+      if (color) parts.push(color);
+
+      const description = parts.length ? parts.join(" · ") : undefined;
+
+      return {
+        id: String(row.id),
+        name,
+        priceNumber,
+        currency,
+        inStock: true,
+        url,
+        image,
+        category: brand || "autos",
+        description,
+        descriptionRaw: undefined,
+        brand: brand || undefined,
+        model: model || undefined,
+        year,
+        km,
+        transmission,
+        engine,
+        fuel,
+        color
+      } as CatalogItem;
+    })
+    .filter((x) => x.id && x.name);
+}
 
 function normalizeText(s: string): string {
   return s
@@ -199,13 +343,23 @@ export async function getCatalog(): Promise<CatalogItem[]> {
 
   const now = Date.now();
 
-  // Local first if no URL
+  // If no JSON URL is configured, use the vehicles table from the connected Postgres DB.
   if (!env.catalogJsonUrl) {
     if (cached && now - cachedAt < ttlMs) return cached;
+    try {
+      const items = await loadVehiclesFromDb(timeoutMs);
+      if (items.length) {
+        cached = items;
+        cachedAt = now;
+        return items;
+      }
+    } catch {
+      // fall back below
+    }
 
+    // Dev fallback: if DB has no vehicles, try local JSON; otherwise sample.
     const local = await tryLoadLocalCatalog();
     if (!local) return sample;
-
     try {
       const items = mapRawCatalog(local);
       cached = items;
@@ -309,7 +463,7 @@ export function searchCatalog(items: CatalogItem[], q: string, limit = 5): Catal
 
       const hay = applySynonyms(
         normalizeText(
-          `${item.id} ${item.name} ${item.category ?? ""} ${item.url ?? ""} ${item.description ?? ""}`
+          `${item.id} ${item.name} ${item.brand ?? ""} ${item.model ?? ""} ${item.year ?? ""} ${item.km ?? ""} ${item.transmission ?? ""} ${item.engine ?? ""} ${item.fuel ?? ""} ${item.color ?? ""} ${item.category ?? ""} ${item.url ?? ""} ${item.description ?? ""}`
         )
       );
 
@@ -350,5 +504,16 @@ export function formatItemLine(item: CatalogItem, idx: number) {
         : "";
 
   const url = item.url ? `\n${item.url}` : "";
-  return `${idx}) ${item.name} ${price}`.trim() + url;
+
+  const specs = (() => {
+    const parts: string[] = [];
+    if (item.year) parts.push(String(item.year));
+    if (typeof item.km === "number" && Number.isFinite(item.km)) parts.push(`${Math.round(item.km).toLocaleString("es-AR")} km`);
+    if (item.transmission) parts.push(item.transmission);
+    if (item.fuel) parts.push(item.fuel);
+    if (item.engine) parts.push(item.engine);
+    return parts.length ? `\n${parts.join(" · ")}` : "";
+  })();
+
+  return `${idx}) ${item.name} ${price}`.trim() + specs + url;
 }

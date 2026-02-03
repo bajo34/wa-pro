@@ -19,6 +19,8 @@ export const env = (() => {
     BOT_COOLDOWN_MS: z.string().optional(),
     // Can be an http(s) URL or a local path inside the bot service (e.g. ./catalog/catalog.json)
     CATALOG_JSON_URL: z.string().optional(),
+    // Optional filter: only show vehicles for a given dealership (uuid)
+    CATALOG_DEALERSHIP_ID: z.string().uuid().optional(),
     DATABASE_URL: z.string().min(1)
   });
 
@@ -35,6 +37,7 @@ export const env = (() => {
     inboundOnly: boolFromString(parsed.BOT_INBOUND_ONLY, true),
     cooldownMs: Number(parsed.BOT_COOLDOWN_MS ?? '1000'),
     catalogJsonUrl: parsed.CATALOG_JSON_URL || undefined,
+    catalogDealershipId: parsed.CATALOG_DEALERSHIP_ID || undefined,
     databaseUrl: parsed.DATABASE_URL,
     /**
      * Humanizer settings. These values control how long the bot waits before
