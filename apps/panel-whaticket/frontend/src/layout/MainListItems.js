@@ -15,7 +15,10 @@ import PeopleAltOutlinedIcon from "@material-ui/icons/PeopleAltOutlined";
 import ContactPhoneOutlinedIcon from "@material-ui/icons/ContactPhoneOutlined";
 import AccountTreeOutlinedIcon from "@material-ui/icons/AccountTreeOutlined";
 import QuestionAnswerOutlinedIcon from "@material-ui/icons/QuestionAnswerOutlined";
-import SmartToyOutlinedIcon from "@material-ui/icons/SmartToyOutlined";
+// NOTE: SmartToyOutlined is not available in some @material-ui/icons v4 releases,
+// which breaks Vite/Rollup builds with "failed to resolve import".
+// Use a stable icon that exists across MUI v4.
+import AndroidOutlinedIcon from "@material-ui/icons/AndroidOutlined";
 
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
@@ -130,7 +133,7 @@ const MainListItems = (props) => {
             <ListItemLink
               to="/bot"
               primary="Bot"
-              icon={<SmartToyOutlinedIcon />}
+              icon={<AndroidOutlinedIcon />}
             />
           </>
         )}

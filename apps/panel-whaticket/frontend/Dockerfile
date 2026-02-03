@@ -1,4 +1,5 @@
-FROM node:14-alpine as build-deps
+# Vite/Rollup + modern deps behave better on Node 18+ (and avoids npm@6 engine warnings).
+FROM node:18-alpine as build-deps
 WORKDIR /usr/src/app
 COPY package*.json ./
 RUN npm install
